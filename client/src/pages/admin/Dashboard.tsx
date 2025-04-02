@@ -82,9 +82,9 @@ export default function AdminDashboard() {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
-  const [stockFilter, setStockFilter] = useState<string>("");
-  const [featuredFilter, setFeaturedFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [stockFilter, setStockFilter] = useState<string>("all");
+  const [featuredFilter, setFeaturedFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name-asc");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
@@ -337,14 +337,14 @@ export default function AdminDashboard() {
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           product.description.toLowerCase().includes(searchQuery.toLowerCase());
         
-        const matchesCategory = categoryFilter === "" || 
+        const matchesCategory = categoryFilter === "" || categoryFilter === "all" || 
           product.category === categoryFilter;
         
-        const matchesFeatured = featuredFilter === "" || 
+        const matchesFeatured = featuredFilter === "" || featuredFilter === "all" || 
           (featuredFilter === "featured" && product.featured) ||
           (featuredFilter === "not-featured" && !product.featured);
         
-        const matchesStock = stockFilter === "" || 
+        const matchesStock = stockFilter === "" || stockFilter === "all" || 
           (stockFilter === "in-stock" && product.inStock) ||
           (stockFilter === "out-of-stock" && !product.inStock) ||
           (stockFilter === "low-stock" && 
@@ -490,7 +490,7 @@ export default function AdminDashboard() {
                                 <SelectValue placeholder="Category" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">All Categories</SelectItem>
+                                <SelectItem value="all">All Categories</SelectItem>
                                 {categories.map((category) => (
                                   <SelectItem key={category} value={category}>
                                     {category}
@@ -507,7 +507,7 @@ export default function AdminDashboard() {
                                 <SelectValue placeholder="Featured" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">All Products</SelectItem>
+                                <SelectItem value="all">All Products</SelectItem>
                                 <SelectItem value="featured">Featured</SelectItem>
                                 <SelectItem value="not-featured">Not Featured</SelectItem>
                               </SelectContent>
@@ -521,7 +521,7 @@ export default function AdminDashboard() {
                                 <SelectValue placeholder="Stock" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">All Stock</SelectItem>
+                                <SelectItem value="all">All Stock</SelectItem>
                                 <SelectItem value="in-stock">In Stock</SelectItem>
                                 <SelectItem value="out-of-stock">Out of Stock</SelectItem>
                                 <SelectItem value="low-stock">Low Stock (≤5)</SelectItem>

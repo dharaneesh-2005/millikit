@@ -85,6 +85,16 @@ export default function Header() {
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
             >
+              <Link href="/admin" className="text-gray-700 hover:text-green-600 transition-colors">
+                <i className="fas fa-user-shield text-xl"></i>
+              </Link>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+              whileHover={{ scale: 1.1 }}
+            >
               <Link href="/cart" className="relative text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-shopping-cart text-xl"></i>
                 <AnimatePresence>
@@ -125,7 +135,7 @@ export default function Header() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              {['/', '/products', '/contact'].map((path, index) => (
+              {['/', '/products', '/contact', '/admin'].map((path, index) => (
                 <motion.div
                   key={path}
                   initial={{ opacity: 0, x: -10 }}
@@ -137,7 +147,10 @@ export default function Header() {
                     className={`block py-2 ${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600' : 'text-gray-700 hover:text-green-600'} transition-colors`}
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    {path === '/' ? t('home') : path === '/products' ? t('products') : t('contact')}
+                    {path === '/' ? t('home') : 
+                      path === '/products' ? t('products') : 
+                      path === '/contact' ? t('contact') : 
+                      'Admin'}
                   </Link>
                 </motion.div>
               ))}
