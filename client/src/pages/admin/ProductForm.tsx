@@ -67,6 +67,8 @@ const productFormSchema = insertProductSchema.extend({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Price must be a valid number"),
+  // Add slug field with validation
+  slug: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -101,6 +103,7 @@ export default function ProductForm() {
       rating: "",
       reviewCount: 0,
       weightOptions: [],
+      slug: "",
     },
   });
 
@@ -136,6 +139,7 @@ export default function ProductForm() {
         rating: product.rating || "",
         reviewCount: product.reviewCount || 0,
         weightOptions: product.weightOptions || [],
+        slug: product.slug || "",
       });
     } catch (error) {
       console.error("Error fetching product:", error);
