@@ -42,7 +42,18 @@ export const products = pgTable("products", {
   reviewCount: integer("review_count").default(0),
   weightOptions: text("weight_options").array(),
   createdAt: timestamp("created_at").defaultNow(),
+  reviews: text("reviews"),
 });
+
+export interface ProductReview {
+  id: string;
+  name: string;
+  avatar?: string;
+  date: string;
+  rating: number;
+  comment: string;
+  helpfulCount: number;
+}
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,

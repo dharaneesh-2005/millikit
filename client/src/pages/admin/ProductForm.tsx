@@ -528,12 +528,12 @@ export default function ProductForm() {
                           <FormLabel>Additional Product Images</FormLabel>
                           <FormControl>
                             <div className="space-y-3">
-                              {field.value.map((imgUrl, index) => (
+                              {(field.value || []).map((imgUrl: string, index: number) => (
                                 <div key={index} className="flex gap-2 items-center">
                                   <Input 
                                     value={imgUrl}
                                     onChange={(e) => {
-                                      const newValue = [...field.value];
+                                      const newValue = [...(field.value || [])];
                                       newValue[index] = e.target.value;
                                       field.onChange(newValue);
                                     }}
@@ -544,7 +544,7 @@ export default function ProductForm() {
                                     size="icon"
                                     type="button"
                                     onClick={() => {
-                                      const newValue = [...field.value];
+                                      const newValue = [...(field.value || [])];
                                       newValue.splice(index, 1);
                                       field.onChange(newValue);
                                     }}
@@ -568,7 +568,7 @@ export default function ProductForm() {
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => field.onChange([...field.value, ""])}
+                                onClick={() => field.onChange([...(field.value || []), ""])}
                                 className="w-full"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
@@ -670,6 +670,28 @@ export default function ProductForm() {
                         )}
                       />
                     </div>
+
+                    <FormField
+                      control={form.control}
+                      name="reviews"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Reviews</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder='[{"id":"1","name":"Customer Name","avatar":"https://example.com/avatar.jpg","date":"April 1, 2023","rating":5,"comment":"Great product!","helpfulCount":8}]' 
+                              className="min-h-36 font-mono text-sm"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Enter reviews in JSON format. Each review should have the following properties: id, name, avatar (optional), date, rating, comment, and helpfulCount.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={form.control}

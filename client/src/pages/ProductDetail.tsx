@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
 import ProductCard from "@/components/ProductCard";
-import { Product } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Product, ProductReview } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductDetail() {
   const { slug } = useParams();
   const { t } = useTranslation();
   const { addToCart } = useCart();
+  const { toast } = useToast();
   
   // State for quantity, selected weight and active tab
   const [quantity, setQuantity] = useState(1);
@@ -20,6 +23,72 @@ export default function ProductDetail() {
   // Fetch product details
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: [`/api/products/slug/${slug}`],
+  });
+  
+  // State for reviews
+  const [productReviews, setProductReviews] = useState<ProductReview[]>([]);
+  
+  // Parse reviews from product data
+  useEffect(() => {
+    if (product?.reviews) {
+      try {
+        const parsedReviews = JSON.parse(product.reviews);
+        setProductReviews(Array.isArray(parsedReviews) ? parsedReviews : []);
+      } catch (e) {
+        console.error("Failed to parse reviews:", e);
+        setProductReviews([]);
+      }
+    } else {
+      setProductReviews([]);
+    }
+  }, [product]);
+  
+  // Handle marking a review as helpful
+  const markReviewHelpful = useMutation({
+    mutationFn: async (reviewId: string) => {
+      if (!product) return;
+      
+      // Find the review and increment helpfulCount
+      const updatedReviews = productReviews.map(review => 
+        review.id === reviewId 
+          ? { ...review, helpfulCount: (review.helpfulCount || 0) + 1 }
+          : review
+      );
+      
+      // Update local state immediately for better UX
+      setProductReviews(updatedReviews);
+      
+      // Send the updated reviews to the server
+      await apiRequest("PATCH", `/api/products/${product.id}`, {
+        reviews: JSON.stringify(updatedReviews)
+      });
+      
+      return updatedReviews;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/products/slug/${slug}`] });
+      toast({
+        title: "Thank you for your feedback",
+        description: "Your vote has been counted.",
+      });
+    },
+    onError: (error) => {
+      // Revert local state if there was an error
+      if (product?.reviews) {
+        try {
+          const parsedReviews = JSON.parse(product.reviews);
+          setProductReviews(Array.isArray(parsedReviews) ? parsedReviews : []);
+        } catch (e) {
+          console.error("Failed to revert reviews:", e);
+        }
+      }
+      
+      toast({
+        title: "Failed to mark review as helpful",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   });
   
   // Fetch related products
@@ -585,64 +654,52 @@ export default function ProductDetail() {
                 
                 {/* Individual Reviews */}
                 <div className="space-y-6">
-                  {/* Review 1 */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-semibold text-gray-800">Priya S.</h4>
-                        <div className="flex items-center mt-1">
-                          <div className="star-rating text-sm">
-                            <i className="fas fa-star"></i>
-                            <i className="fas fa-star"></i>
-                            <i className="fas fa-star"></i>
-                            <i className="fas fa-star"></i>
-                            <i className="fas fa-star"></i>
+                  {productReviews.length > 0 ? (
+                    <>
+                      {productReviews.map((review) => (
+                        <div key={review.id} className="bg-white p-6 rounded-lg shadow-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-semibold text-gray-800">{review.name}</h4>
+                              <div className="flex items-center mt-1">
+                                <div className="star-rating text-sm">
+                                  {[...Array(5)].map((_, i) => (
+                                    <i key={i} className={`fa${i < review.rating ? 's' : 'r'} fa-star`}></i>
+                                  ))}
+                                </div>
+                                <span className="text-xs text-gray-500 ml-2">Verified Purchase</span>
+                              </div>
+                            </div>
+                            <span className="text-sm text-gray-500">{review.date}</span>
                           </div>
-                          <span className="text-xs text-gray-500 ml-2">Verified Purchase</span>
-                        </div>
-                      </div>
-                      <span className="text-sm text-gray-500">2 weeks ago</span>
-                    </div>
-                    <p className="mt-3 text-gray-700">Excellent quality millet! I've been using it to make pongal and upma, and the taste is much better than other brands I've tried. The grain cooks evenly and has a pleasant nutty flavor. Will definitely buy again.</p>
-                    <div className="flex mt-4">
-                      <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center">
-                        <i className="far fa-thumbs-up mr-1"></i> Helpful (3)
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Review 2 */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-semibold text-gray-800">Rajesh M.</h4>
-                        <div className="flex items-center mt-1">
-                          <div className="star-rating text-sm">
-                            <i className="fas fa-star"></i>
-                            <i className="fas fa-star"></i>
-                            <i className="fas fa-star"></i>
-                            <i className="fas fa-star"></i>
-                            <i className="far fa-star"></i>
+                          <p className="mt-3 text-gray-700">{review.comment}</p>
+                          <div className="flex mt-4">
+                            <button 
+                              className="text-sm text-gray-500 hover:text-gray-700 flex items-center"
+                              onClick={() => markReviewHelpful.mutate(review.id)}
+                              disabled={markReviewHelpful.isPending}
+                            >
+                              <i className="far fa-thumbs-up mr-1"></i> 
+                              Helpful ({review.helpfulCount || 0})
+                            </button>
                           </div>
-                          <span className="text-xs text-gray-500 ml-2">Verified Purchase</span>
                         </div>
-                      </div>
-                      <span className="text-sm text-gray-500">1 month ago</span>
+                      ))}
+                      
+                      {/* More Reviews Button */}
+                      {productReviews.length > 2 && (
+                        <div className="text-center">
+                          <button className="text-green-600 hover:text-green-700 font-medium flex items-center justify-center mx-auto">
+                            Load More Reviews <i className="fas fa-chevron-down ml-2"></i>
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+                      <p className="text-gray-600">No reviews yet. Be the first to review this product!</p>
                     </div>
-                    <p className="mt-3 text-gray-700">Good quality foxtail millet. I've been using it as a rice substitute to control blood sugar. The packaging is good and keeps the millet fresh. My only complaint is that it takes a bit longer to cook than mentioned in the instructions.</p>
-                    <div className="flex mt-4">
-                      <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center">
-                        <i className="far fa-thumbs-up mr-1"></i> Helpful (1)
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* More Reviews Button */}
-                  <div className="text-center">
-                    <button className="text-green-600 hover:text-green-700 font-medium flex items-center justify-center mx-auto">
-                      Load More Reviews <i className="fas fa-chevron-down ml-2"></i>
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
