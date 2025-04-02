@@ -87,9 +87,16 @@ export default function ProductDetail() {
   };
   
   // Parse nutrition facts if available
-  const nutritionFacts = product?.nutritionFacts 
-    ? JSON.parse(product.nutritionFacts) 
-    : null;
+  let nutritionFacts = null;
+  if (product?.nutritionFacts) {
+    try {
+      // Try to parse it as JSON
+      nutritionFacts = JSON.parse(product.nutritionFacts);
+    } catch (e) {
+      // If it's not valid JSON, use it as plain text
+      nutritionFacts = { text: product.nutritionFacts };
+    }
+  }
   
   if (isLoading) {
     return (
@@ -359,60 +366,72 @@ export default function ProductDetail() {
               {nutritionFacts ? (
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Nutrition Facts</h3>
-                  <p className="text-sm text-gray-600 mb-4">Serving Size: {nutritionFacts.servingSize}</p>
                   
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between border-b py-2">
-                      <span className="font-medium">Calories</span>
-                      <span>{nutritionFacts.calories} kcal</span>
+                  {/* If nutritionFacts is just plain text */}
+                  {nutritionFacts.text ? (
+                    <div className="whitespace-pre-line">
+                      <p>{nutritionFacts.text}</p>
                     </div>
-                    <div className="flex justify-between border-b py-2">
-                      <span className="font-medium">Total Fat</span>
-                      <span>{nutritionFacts.totalFat}g</span>
-                    </div>
-                    <div className="flex justify-between border-b py-2 pl-6">
-                      <span>Saturated Fat</span>
-                      <span>{nutritionFacts.saturatedFat}g</span>
-                    </div>
-                    <div className="flex justify-between border-b py-2">
-                      <span className="font-medium">Cholesterol</span>
-                      <span>{nutritionFacts.cholesterol}mg</span>
-                    </div>
-                    <div className="flex justify-between border-b py-2">
-                      <span className="font-medium">Sodium</span>
-                      <span>{nutritionFacts.sodium}mg</span>
-                    </div>
-                    <div className="flex justify-between border-b py-2">
-                      <span className="font-medium">Total Carbohydrate</span>
-                      <span>{nutritionFacts.totalCarbohydrate}g</span>
-                    </div>
-                    <div className="flex justify-between border-b py-2 pl-6">
-                      <span>Dietary Fiber</span>
-                      <span>{nutritionFacts.dietaryFiber}g</span>
-                    </div>
-                    <div className="flex justify-between border-b py-2 pl-6">
-                      <span>Sugars</span>
-                      <span>{nutritionFacts.sugars}g</span>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="font-medium">Protein</span>
-                      <span>{nutritionFacts.protein}g</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6">
-                    <h4 className="font-medium text-gray-800 mb-2">Vitamins & Minerals</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(nutritionFacts.vitamins).map(([name, value]) => (
-                        <div key={name} className="flex justify-between">
-                          <span>{name}</span>
-                          <span>{value}</span>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600 mb-4">Serving Size: {nutritionFacts.servingSize}</p>
+                      
+                      <div className="border-t pt-4">
+                        <div className="flex justify-between border-b py-2">
+                          <span className="font-medium">Calories</span>
+                          <span>{nutritionFacts.calories} kcal</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <p className="text-xs text-gray-500 mt-6">*Percent Daily Values (DV) are based on a 2,000 calorie diet. Your daily values may be higher or lower depending on your calorie needs.</p>
+                        <div className="flex justify-between border-b py-2">
+                          <span className="font-medium">Total Fat</span>
+                          <span>{nutritionFacts.totalFat}g</span>
+                        </div>
+                        <div className="flex justify-between border-b py-2 pl-6">
+                          <span>Saturated Fat</span>
+                          <span>{nutritionFacts.saturatedFat}g</span>
+                        </div>
+                        <div className="flex justify-between border-b py-2">
+                          <span className="font-medium">Cholesterol</span>
+                          <span>{nutritionFacts.cholesterol}mg</span>
+                        </div>
+                        <div className="flex justify-between border-b py-2">
+                          <span className="font-medium">Sodium</span>
+                          <span>{nutritionFacts.sodium}mg</span>
+                        </div>
+                        <div className="flex justify-between border-b py-2">
+                          <span className="font-medium">Total Carbohydrate</span>
+                          <span>{nutritionFacts.totalCarbohydrate}g</span>
+                        </div>
+                        <div className="flex justify-between border-b py-2 pl-6">
+                          <span>Dietary Fiber</span>
+                          <span>{nutritionFacts.dietaryFiber}g</span>
+                        </div>
+                        <div className="flex justify-between border-b py-2 pl-6">
+                          <span>Sugars</span>
+                          <span>{nutritionFacts.sugars}g</span>
+                        </div>
+                        <div className="flex justify-between py-2">
+                          <span className="font-medium">Protein</span>
+                          <span>{nutritionFacts.protein}g</span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-6">
+                        <h4 className="font-medium text-gray-800 mb-2">Vitamins & Minerals</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {nutritionFacts.vitamins && typeof nutritionFacts.vitamins === 'object' && 
+                            Object.entries(nutritionFacts.vitamins as Record<string, string>).map(([name, value]) => (
+                              <div key={name} className="flex justify-between">
+                                <span>{name}</span>
+                                <span>{value}</span>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-gray-500 mt-6">*Percent Daily Values (DV) are based on a 2,000 calorie diet. Your daily values may be higher or lower depending on your calorie needs.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">

@@ -74,6 +74,23 @@ import { formatPrice } from "@/lib/cart";
 // The admin key - in a real app, this would be retrieved securely (e.g., from auth context)
 const ADMIN_KEY = "admin-secret";
 
+// Format a phone number for better readability (e.g., (123) 456-7890)
+const formatPhoneNumber = (phoneNumber: string) => {
+  // Clean the phone number to only contain digits
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Check if it's a valid phone number (10 digits for US numbers)
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  } else if (cleaned.length > 10) {
+    // For international numbers with country code
+    return `+${cleaned.slice(0, cleaned.length-10)} (${cleaned.slice(-10, -7)}) ${cleaned.slice(-7, -4)}-${cleaned.slice(-4)}`;
+  }
+  
+  // If it doesn't match expected formats, return the original number
+  return phoneNumber;
+};
+
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
@@ -828,7 +845,9 @@ export default function AdminDashboard() {
                                       <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                       </svg>
-                                      {contact.phone}
+                                      <a href={`tel:${contact.phone}`} className="hover:text-green-600 transition-colors">
+                                        {formatPhoneNumber(contact.phone)}
+                                      </a>
                                     </div>
                                   </div>
                                 </CardDescription>

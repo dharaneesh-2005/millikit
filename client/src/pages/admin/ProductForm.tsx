@@ -397,6 +397,30 @@ export default function ProductForm() {
                     
                     <FormField
                       control={form.control}
+                      name="slug"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL Slug</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="product-url-slug" 
+                              {...field} 
+                              value={field.value || ""}
+                              disabled={!isEditMode} // Only allow editing for existing products
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {isEditMode 
+                              ? "Unique identifier for product URL. Edit with caution as it affects links."
+                              : "Will be automatically generated from product name."}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
                       name="featured"
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0">
