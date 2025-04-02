@@ -73,6 +73,17 @@ const productFormSchema = insertProductSchema.extend({
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
+// For review management, we'll use a local type
+interface ReviewItem {
+  id: string;
+  name: string;
+  avatar?: string;
+  date: string;
+  rating: number;
+  comment: string;
+  helpfulCount: number;
+}
+
 export default function ProductForm() {
   const [_, navigate] = useLocation();
   const [__, params] = useRoute<{ id: string }>("/admin/products/:id");
@@ -82,6 +93,11 @@ export default function ProductForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Review management state
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [editingReview, setEditingReview] = useState<ReviewItem | null>(null);
+  const [editReviewIndex, setEditReviewIndex] = useState<number>(-1);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -104,8 +120,29 @@ export default function ProductForm() {
       reviewCount: 0,
       weightOptions: [],
       slug: "",
+      reviews: "",
     },
   });
+
+  // Load reviews when form data changes
+  useEffect(() => {
+    const reviewsStr = form.watch("reviews");
+    if (reviewsStr) {
+      try {
+        setReviews(JSON.parse(reviewsStr));
+      } catch (e) {
+        console.error("Error parsing reviews:", e);
+        setReviews([]);
+      }
+    } else {
+      setReviews([]);
+    }
+  }, [form.watch("reviews")]);
+
+  // Update form when reviews change
+  useEffect(() => {
+    form.setValue("reviews", JSON.stringify(reviews));
+  }, [reviews, form]);
 
   useEffect(() => {
     if (isEditMode && productId) {
@@ -140,6 +177,7 @@ export default function ProductForm() {
         reviewCount: product.reviewCount || 0,
         weightOptions: product.weightOptions || [],
         slug: product.slug || "",
+        reviews: product.reviews || "[]",
       });
     } catch (error) {
       console.error("Error fetching product:", error);
@@ -151,6 +189,52 @@ export default function ProductForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddReview = () => {
+    const newReview: ReviewItem = {
+      id: Date.now().toString(),
+      name: "",
+      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      rating: 5,
+      comment: "",
+      helpfulCount: 0
+    };
+    setEditingReview(newReview);
+    setEditReviewIndex(-1);
+  };
+  
+  const handleEditReview = (review: ReviewItem, index: number) => {
+    setEditingReview({ ...review });
+    setEditReviewIndex(index);
+  };
+  
+  const handleDeleteReview = (index: number) => {
+    const updatedReviews = [...reviews];
+    updatedReviews.splice(index, 1);
+    setReviews(updatedReviews);
+  };
+  
+  const handleSaveReview = () => {
+    if (!editingReview) return;
+    
+    const updatedReviews = [...reviews];
+    if (editReviewIndex >= 0) {
+      // Update existing review
+      updatedReviews[editReviewIndex] = editingReview;
+    } else {
+      // Add new review
+      updatedReviews.push(editingReview);
+    }
+    
+    setReviews(updatedReviews);
+    setEditingReview(null);
+    setEditReviewIndex(-1);
+  };
+  
+  const handleCancelEdit = () => {
+    setEditingReview(null);
+    setEditReviewIndex(-1);
   };
 
   const onSubmit = async (data: ProductFormValues) => {
@@ -483,7 +567,7 @@ export default function ProductForm() {
                     />
                   </div>
                   
-                  {/* Images */}
+                  {/* Image Section */}
                   <div className="space-y-6 md:col-span-2">
                     <h2 className="text-xl font-semibold">Images</h2>
                     
@@ -492,7 +576,7 @@ export default function ProductForm() {
                       name="imageUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Main Image URL *</FormLabel>
+                          <FormLabel>Main Product Image URL *</FormLabel>
                           <FormControl>
                             <Input placeholder="https://example.com/image.jpg" {...field} />
                           </FormControl>
@@ -500,92 +584,69 @@ export default function ProductForm() {
                             URL to the main product image
                           </FormDescription>
                           <FormMessage />
-                          {field.value && (
-                            <div className="mt-2">
-                              <p className="text-sm font-medium mb-2">Image Preview:</p>
-                              <div className="border rounded-md overflow-hidden w-32 h-32">
-                                <img 
-                                  src={field.value} 
-                                  alt="Product preview"
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.src = "https://placehold.co/300x300?text=Invalid+Image+URL";
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          )}
                         </FormItem>
                       )}
                     />
 
-                    {/* Image Gallery */}
                     <FormField
                       control={form.control}
                       name="imageGallery"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Additional Product Images</FormLabel>
+                          <FormLabel>Additional Image Gallery URLs</FormLabel>
                           <FormControl>
                             <div className="space-y-3">
-                              {(field.value || []).map((imgUrl: string, index: number) => (
-                                <div key={index} className="flex gap-2 items-center">
-                                  <Input 
-                                    value={imgUrl}
-                                    onChange={(e) => {
-                                      const newValue = [...(field.value || [])];
-                                      newValue[index] = e.target.value;
-                                      field.onChange(newValue);
-                                    }}
-                                    placeholder="https://example.com/gallery-image.jpg"
-                                  />
-                                  <Button 
-                                    variant="destructive" 
-                                    size="icon"
-                                    type="button"
-                                    onClick={() => {
-                                      const newValue = [...(field.value || [])];
-                                      newValue.splice(index, 1);
-                                      field.onChange(newValue);
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                  {imgUrl && (
-                                    <div className="border rounded-md overflow-hidden w-10 h-10 flex-shrink-0">
-                                      <img 
-                                        src={imgUrl} 
-                                        alt={`Gallery preview ${index+1}`}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                          e.currentTarget.src = "https://placehold.co/100x100?text=Preview";
+                              {field.value?.length > 0 ? (
+                                <div className="space-y-2">
+                                  {field.value.map((imgUrl, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                      <Input 
+                                        value={imgUrl} 
+                                        onChange={(e) => {
+                                          const newGallery = [...field.value];
+                                          newGallery[index] = e.target.value;
+                                          field.onChange(newGallery);
                                         }}
+                                        placeholder={`Image URL ${index + 1}`}
                                       />
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        type="button"
+                                        onClick={() => {
+                                          const newGallery = [...field.value];
+                                          newGallery.splice(index, 1);
+                                          field.onChange(newGallery);
+                                        }}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
                                     </div>
-                                  )}
+                                  ))}
                                 </div>
-                              ))}
+                              ) : null}
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => field.onChange([...(field.value || []), ""])}
-                                className="w-full"
+                                size="sm"
+                                className="mt-2"
+                                onClick={() => {
+                                  const currentGallery = field.value || [];
+                                  field.onChange([...currentGallery, ""]);
+                                }}
                               >
-                                <Plus className="h-4 w-4 mr-2" />
+                                <Plus className="mr-2 h-4 w-4" />
                                 Add Image URL
                               </Button>
                             </div>
                           </FormControl>
-                          <FormDescription>
-                            Add multiple images to create a product gallery (optional)
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
                   
-                  {/* Additional Information */}
+                  {/* Additional Information Section */}
                   <div className="space-y-6 md:col-span-2">
                     <h2 className="text-xl font-semibold">Additional Information</h2>
                     
@@ -597,17 +658,20 @@ export default function ProductForm() {
                           <FormLabel>Nutrition Facts</FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Enter nutrition information in JSON format or as text" 
-                              className="min-h-24"
+                              placeholder='{"calories": "350 kcal", "protein": "12g", "carbohydrates": "70g", "fat": "2g", "fiber": "8g"}' 
+                              className="font-mono text-sm"
                               {...field}
                               value={field.value || ""}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Enter nutrition information in JSON format.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="cookingInstructions"
@@ -616,8 +680,8 @@ export default function ProductForm() {
                           <FormLabel>Cooking Instructions</FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Step-by-step preparation instructions" 
-                              className="min-h-24"
+                              placeholder="Step-by-step cooking instructions for this product." 
+                              className="min-h-32"
                               {...field}
                               value={field.value || ""}
                             />
@@ -627,71 +691,156 @@ export default function ProductForm() {
                       )}
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                      <FormField
-                        control={form.control}
-                        name="rating"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Product Rating</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="4.5" 
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Product rating between 0-5 (e.g., 4.5)
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="reviewCount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Number of Reviews</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min="0"
-                                placeholder="0" 
-                                {...field}
-                                onChange={e => field.onChange(parseInt(e.target.value) || 0)}
-                                value={field.value || 0}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-base">Product Reviews</FormLabel>
+                      </div>
+                      
+                      <Card className="border">
+                        <CardContent className="pt-6">
+                          {editingReview ? (
+                            // Edit/Add Review Form
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="reviewName">Customer Name</Label>
+                                  <Input 
+                                    id="reviewName" 
+                                    value={editingReview.name}
+                                    onChange={(e) => setEditingReview({...editingReview, name: e.target.value})}
+                                    placeholder="Customer name"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="reviewAvatar">Avatar URL (optional)</Label>
+                                  <Input 
+                                    id="reviewAvatar" 
+                                    value={editingReview.avatar || ''}
+                                    onChange={(e) => setEditingReview({...editingReview, avatar: e.target.value})}
+                                    placeholder="https://example.com/avatar.jpg"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="reviewDate">Review Date</Label>
+                                  <Input 
+                                    id="reviewDate" 
+                                    value={editingReview.date}
+                                    onChange={(e) => setEditingReview({...editingReview, date: e.target.value})}
+                                    placeholder="April 1, 2023"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="reviewRating">Rating (1-5)</Label>
+                                  <div className="flex items-center space-x-4">
+                                    {[1, 2, 3, 4, 5].map((rating) => (
+                                      <Button 
+                                        key={rating}
+                                        type="button"
+                                        variant={editingReview.rating >= rating ? "default" : "outline"}
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => setEditingReview({...editingReview, rating})}
+                                      >
+                                        {rating}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="reviewComment">Review Comment</Label>
+                                <Textarea 
+                                  id="reviewComment" 
+                                  value={editingReview.comment}
+                                  onChange={(e) => setEditingReview({...editingReview, comment: e.target.value})}
+                                  placeholder="Customer review comment"
+                                  className="min-h-20"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="helpfulCount">Helpful Count</Label>
+                                <Input 
+                                  id="helpfulCount" 
+                                  type="number" 
+                                  min="0"
+                                  value={editingReview.helpfulCount}
+                                  onChange={(e) => setEditingReview({...editingReview, helpfulCount: parseInt(e.target.value) || 0})}
+                                />
+                              </div>
+                              
+                              <div className="flex justify-end space-x-2 pt-2">
+                                <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                                <Button onClick={handleSaveReview}>Save Review</Button>
+                              </div>
+                            </div>
+                          ) : (
+                            // Reviews List
+                            <div className="space-y-4">
+                              {reviews.length === 0 ? (
+                                <div className="text-center py-6 text-muted-foreground">
+                                  No reviews yet. Add your first review!
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  {reviews.map((review, index) => (
+                                    <div key={review.id} className="flex items-start justify-between border-b pb-4">
+                                      <div className="space-y-1">
+                                        <div className="flex items-center space-x-2">
+                                          <span className="font-medium">{review.name}</span>
+                                          <span className="text-muted-foreground text-sm">{review.date}</span>
+                                        </div>
+                                        <div className="flex items-center space-x-1">
+                                          {Array.from({ length: 5 }).map((_, i) => (
+                                            <Star 
+                                              key={i} 
+                                              className={`h-4 w-4 ${i < review.rating ? "fill-amber-500 text-amber-500" : "text-muted-foreground"}`} 
+                                            />
+                                          ))}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground line-clamp-2">{review.comment}</p>
+                                      </div>
+                                      <div className="flex space-x-2">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          onClick={() => handleEditReview(review, index)}
+                                        >
+                                          Edit
+                                        </Button>
+                                        <Button 
+                                          variant="destructive" 
+                                          size="sm"
+                                          onClick={() => handleDeleteReview(index)}
+                                        >
+                                          Delete
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-center pt-2">
+                                <Button 
+                                  onClick={handleAddReview}
+                                  className="w-full"
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add Review
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="reviews"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Product Reviews</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder='[{"id":"1","name":"Customer Name","avatar":"https://example.com/avatar.jpg","date":"April 1, 2023","rating":5,"comment":"Great product!","helpfulCount":8}]' 
-                              className="min-h-36 font-mono text-sm"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Enter reviews in JSON format. Each review should have the following properties: id, name, avatar (optional), date, rating, comment, and helpfulCount.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
                     <FormField
                       control={form.control}
