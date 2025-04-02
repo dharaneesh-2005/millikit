@@ -518,6 +518,71 @@ export default function ProductForm() {
                         </FormItem>
                       )}
                     />
+
+                    {/* Image Gallery */}
+                    <FormField
+                      control={form.control}
+                      name="imageGallery"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Additional Product Images</FormLabel>
+                          <FormControl>
+                            <div className="space-y-3">
+                              {field.value.map((imgUrl, index) => (
+                                <div key={index} className="flex gap-2 items-center">
+                                  <Input 
+                                    value={imgUrl}
+                                    onChange={(e) => {
+                                      const newValue = [...field.value];
+                                      newValue[index] = e.target.value;
+                                      field.onChange(newValue);
+                                    }}
+                                    placeholder="https://example.com/gallery-image.jpg"
+                                  />
+                                  <Button 
+                                    variant="destructive" 
+                                    size="icon"
+                                    type="button"
+                                    onClick={() => {
+                                      const newValue = [...field.value];
+                                      newValue.splice(index, 1);
+                                      field.onChange(newValue);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                  {imgUrl && (
+                                    <div className="border rounded-md overflow-hidden w-10 h-10 flex-shrink-0">
+                                      <img 
+                                        src={imgUrl} 
+                                        alt={`Gallery preview ${index+1}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.src = "https://placehold.co/100x100?text=Preview";
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => field.onChange([...field.value, ""])}
+                                className="w-full"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Image URL
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Add multiple images to create a product gallery (optional)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   
                   {/* Additional Information */}
