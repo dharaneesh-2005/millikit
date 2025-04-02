@@ -259,12 +259,14 @@ export default function ProductDetail() {
                   </span>
                 )}
                 <div className="star-rating ml-4">
-                  <i className="fas fa-star"></i>
-                  <i className="fas fa-star"></i>
-                  <i className="fas fa-star"></i>
-                  <i className="fas fa-star"></i>
-                  <i className="fas fa-star-half-alt"></i>
-                  <span className="text-gray-500 text-sm ml-2">(27 reviews)</span>
+                  {[...Array(5)].map((_, i) => (
+                    <i 
+                      key={i} 
+                      className={`fa${i < Math.floor(Number(product.rating || 0)) ? 's' : 
+                                  i < Math.ceil(Number(product.rating || 0)) && i >= Math.floor(Number(product.rating || 0)) ? 's fa-star-half-alt' : 'r'} fa-star`}
+                    ></i>
+                  ))}
+                  <span className="text-gray-500 text-sm ml-2">({product.reviewCount || 0} {t('reviews')})</span>
                 </div>
               </div>
               
@@ -421,7 +423,7 @@ export default function ProductDetail() {
                   : "text-gray-500 hover:text-green-600"
               }`}
             >
-              {t('reviews')} (27)
+              {t('reviews')} ({product.reviewCount || 0})
             </button>
           </div>
           
@@ -600,56 +602,45 @@ export default function ProductDetail() {
                   </div>
                   
                   <div className="flex items-center mt-4">
-                    <div className="text-5xl font-bold text-gray-800 mr-4">4.7</div>
+                    <div className="text-5xl font-bold text-gray-800 mr-4">{Number(product.rating || 0).toFixed(1)}</div>
                     <div>
                       <div className="star-rating text-xl">
-                        <i className="fas fa-star"></i>
-                        <i className="fas fa-star"></i>
-                        <i className="fas fa-star"></i>
-                        <i className="fas fa-star"></i>
-                        <i className="fas fa-star-half-alt"></i>
+                        {[...Array(5)].map((_, i) => (
+                          <i 
+                            key={i} 
+                            className={`fa${i < Math.floor(Number(product.rating || 0)) ? 's' : 
+                                      i < Math.ceil(Number(product.rating || 0)) && i >= Math.floor(Number(product.rating || 0)) ? 's fa-star-half-alt' : 'r'} fa-star`}
+                          ></i>
+                        ))}
                       </div>
-                      <p className="text-gray-600 mt-1">Based on 27 reviews</p>
+                      <p className="text-gray-600 mt-1">Based on {product.reviewCount || 0} reviews</p>
                     </div>
                   </div>
                   
-                  <div className="mt-6 space-y-2">
-                    <div className="flex items-center">
-                      <span className="text-xs w-8">5 ★</span>
-                      <div className="w-full bg-gray-200 h-2 ml-2 rounded-full overflow-hidden">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: "78%" }}></div>
-                      </div>
-                      <span className="text-xs w-8 ml-2">78%</span>
+                  {productReviews.length > 0 && (
+                    <div className="mt-6 space-y-2">
+                      {[5, 4, 3, 2, 1].map(rating => {
+                        // Count reviews for this rating
+                        const ratingCount = productReviews.filter(r => Math.round(r.rating) === rating).length;
+                        const percentage = productReviews.length > 0 
+                          ? Math.round((ratingCount / productReviews.length) * 100) 
+                          : 0;
+                          
+                        return (
+                          <div key={rating} className="flex items-center">
+                            <span className="text-xs w-8">{rating} ★</span>
+                            <div className="w-full bg-gray-200 h-2 ml-2 rounded-full overflow-hidden">
+                              <div 
+                                className="bg-green-600 h-2 rounded-full" 
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs w-8 ml-2">{percentage}%</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="flex items-center">
-                      <span className="text-xs w-8">4 ★</span>
-                      <div className="w-full bg-gray-200 h-2 ml-2 rounded-full overflow-hidden">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: "15%" }}></div>
-                      </div>
-                      <span className="text-xs w-8 ml-2">15%</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-xs w-8">3 ★</span>
-                      <div className="w-full bg-gray-200 h-2 ml-2 rounded-full overflow-hidden">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: "5%" }}></div>
-                      </div>
-                      <span className="text-xs w-8 ml-2">5%</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-xs w-8">2 ★</span>
-                      <div className="w-full bg-gray-200 h-2 ml-2 rounded-full overflow-hidden">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: "2%" }}></div>
-                      </div>
-                      <span className="text-xs w-8 ml-2">2%</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-xs w-8">1 ★</span>
-                      <div className="w-full bg-gray-200 h-2 ml-2 rounded-full overflow-hidden">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: "0%" }}></div>
-                      </div>
-                      <span className="text-xs w-8 ml-2">0%</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
                 
                 {/* Individual Reviews */}
