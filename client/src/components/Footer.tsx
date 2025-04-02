@@ -9,7 +9,13 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-2xl font-bold mb-4">Millikit</h3>
+            <div className="flex items-center mb-4">
+              <img 
+                src="/assets/LOGO-removebg-preview.png" 
+                alt="Millikit Logo" 
+                className="h-16 w-auto mr-2 bg-white/10 rounded-full p-1" 
+              />
+            </div>
             <p className="text-gray-300">{t('footer.tagline')}</p>
           </div>
           

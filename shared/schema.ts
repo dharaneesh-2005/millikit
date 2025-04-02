@@ -76,6 +76,11 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
+// Admin-specific types
+export interface UserWithRole extends User {
+  isAdmin: boolean;
+}
+
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 

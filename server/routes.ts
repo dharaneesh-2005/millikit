@@ -1,9 +1,22 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCartItemSchema, insertContactSchema } from "@shared/schema";
+import { insertCartItemSchema, insertContactSchema, insertProductSchema } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+
+// Admin middleware to check if the user has admin privileges
+const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  // For simplicity, we're using a header to indicate admin status
+  // In a real application, this would check for a logged-in user with admin role
+  const adminKey = req.headers["x-admin-key"];
+  
+  if (!adminKey || adminKey !== "admin-secret") {
+    return res.status(403).json({ message: "Unauthorized access" });
+  }
+  
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create HTTP server
@@ -133,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update quantity if item already exists
         const updatedItem = await storage.updateCartItem(
           existingItem.id,
-          existingItem.quantity + validatedData.quantity
+          existingItem.quantity + (validatedData.quantity || 1)
         );
         return res.json(updatedItem);
       }
@@ -212,6 +225,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: error.errors });
       }
       res.status(500).json({ message: "Error submitting contact form" });
+    }
+  });
+
+  // Admin Routes
+  
+  // Admin Product Management
+  app.post("/api/admin/products", isAdmin, async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Error creating product" });
+    }
+  });
+
+  app.put("/api/admin/products/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      const product = await storage.getProductById(id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const updatedProduct = await storage.updateProduct(id, req.body);
+      res.json(updatedProduct);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Error updating product" });
+    }
+  });
+
+  app.delete("/api/admin/products/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      const product = await storage.getProductById(id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      await storage.deleteProduct(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting product" });
+    }
+  });
+
+  // Admin Contact Management
+  app.get("/api/admin/contacts", isAdmin, async (req, res) => {
+    try {
+      const contacts = await storage.getContacts();
+      res.json(contacts);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching contacts" });
     }
   });
 

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
 import ProductCard from "@/components/ProductCard";
@@ -26,29 +27,65 @@ export default function Home() {
       <section id="home" className="hero-gradient min-h-screen flex items-center pt-16">
         <div className="container mx-auto px-6 py-24">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="text-left">
-              <h1 className="text-4xl md:text-6xl font-bold text-green-800 mb-6 text-shadow">
+            <motion.div 
+              className="text-left"
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            >
+              <motion.h1 
+                className="text-4xl md:text-6xl font-bold text-green-800 mb-6 text-shadow"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.8 }}
+              >
                 {t('home')} {t('footer.tagline')}
-              </h1>
-              <p className="text-lg md:text-xl text-gray-700 mb-8">
+              </motion.h1>
+              <motion.p 
+                className="text-lg md:text-xl text-gray-700 mb-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4, duration: 0.8 }}
+              >
                 Premium quality millets for your healthy lifestyle. Organic, nutritious, and sustainably sourced.
-              </p>
-              <div className="flex space-x-4">
-                <Link href="/products" className="bg-green-700 text-white px-8 py-3 rounded-full hover:bg-green-600 transition-colors transform hover:scale-105 duration-300">
-                  {t('products')}
-                </Link>
-                <a href="#about" className="bg-white text-green-700 px-8 py-3 rounded-full hover:bg-gray-50 transition-colors">
-                  Learn More
-                </a>
-              </div>
-            </div>
-            <div className="relative float-animation">
-              <img 
+              </motion.p>
+              <motion.div 
+                className="flex space-x-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.8 }}
+              >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link href="/products" className="bg-green-700 text-white px-8 py-3 rounded-full hover:bg-green-600 transition-colors block">
+                    {t('products')}
+                  </Link>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <a href="#about" className="bg-white text-green-700 px-8 py-3 rounded-full hover:bg-gray-50 transition-colors block">
+                    Learn More
+                  </a>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+            <motion.div 
+              className="relative"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            >
+              <motion.img 
                 src="https://images.pexels.com/photos/7511774/pexels-photo-7511774.jpeg" 
                 alt="Millet grains" 
                 className="rounded-2xl shadow-2xl"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5 }}
+                whileHover={{ 
+                  scale: 1.03,
+                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                }}
               />
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -84,32 +121,102 @@ export default function Home() {
       {/* Features Section */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-green-800 mb-16">Why Choose Millikit?</h2>
+          <motion.h2 
+            className="text-3xl md:text-4xl font-bold text-center text-green-800 mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.6 }}
+          >
+            Why Choose Millikit?
+          </motion.h2>
           <div className="grid md:grid-cols-3 gap-12">
             {/* Feature 1 */}
-            <div className="text-center">
-              <div className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i className="fas fa-seedling text-3xl text-green-600"></i>
-              </div>
+            <motion.div 
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              whileHover={{ y: -5 }}
+            >
+              <motion.div 
+                className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+                whileHover={{ 
+                  scale: 1.1, 
+                  backgroundColor: "rgb(254 240 138 / 1)" 
+                }}
+              >
+                <motion.i 
+                  className="fas fa-seedling text-3xl text-green-600"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                />
+              </motion.div>
               <h3 className="text-xl font-semibold text-gray-800 mb-4">100% Organic</h3>
               <p className="text-gray-600">Carefully sourced from organic farms, ensuring the highest quality millets.</p>
-            </div>
+            </motion.div>
+            
             {/* Feature 2 */}
-            <div className="text-center">
-              <div className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i className="fas fa-heart text-3xl text-green-600"></i>
-              </div>
+            <motion.div 
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              whileHover={{ y: -5 }}
+            >
+              <motion.div 
+                className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+                whileHover={{ 
+                  scale: 1.1, 
+                  backgroundColor: "rgb(254 240 138 / 1)" 
+                }}
+              >
+                <motion.i 
+                  className="fas fa-heart text-3xl text-green-600"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ 
+                    duration: 0.5, 
+                    delay: 0.4,
+                    repeat: Infinity,
+                    repeatType: "reverse",
+                    repeatDelay: 1.5
+                  }}
+                />
+              </motion.div>
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Nutrient-Rich</h3>
               <p className="text-gray-600">Packed with essential nutrients, proteins, and minerals for your wellbeing.</p>
-            </div>
+            </motion.div>
+            
             {/* Feature 3 */}
-            <div className="text-center">
-              <div className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i className="fas fa-truck text-3xl text-green-600"></i>
-              </div>
+            <motion.div 
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              whileHover={{ y: -5 }}
+            >
+              <motion.div 
+                className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+                whileHover={{ 
+                  scale: 1.1, 
+                  backgroundColor: "rgb(254 240 138 / 1)" 
+                }}
+              >
+                <motion.i 
+                  className="fas fa-truck text-3xl text-green-600"
+                  initial={{ x: -50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                />
+              </motion.div>
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Fast Delivery</h3>
               <p className="text-gray-600">Quick and secure delivery right to your doorstep across the country.</p>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>

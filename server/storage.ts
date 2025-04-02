@@ -10,6 +10,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  isAdmin(userId: number): Promise<boolean>;
 
   // Product operations
   getProducts(): Promise<Product[]>;
@@ -18,6 +19,9 @@ export interface IStorage {
   getProductsByCategory(category: string): Promise<Product[]>;
   getFeaturedProducts(): Promise<Product[]>;
   searchProducts(query: string): Promise<Product[]>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: number): Promise<void>;
 
   // Cart operations
   getCartItems(sessionId: string): Promise<CartItem[]>;
@@ -29,6 +33,7 @@ export interface IStorage {
 
   // Contact operations
   createContact(contact: InsertContact): Promise<Contact>;
+  getContacts(): Promise<Contact[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -68,9 +73,22 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      name: insertUser.name || null,
+      email: insertUser.email || null,
+      phone: insertUser.phone || null,
+      address: insertUser.address || null
+    };
     this.users.set(id, user);
     return user;
+  }
+  
+  async isAdmin(userId: number): Promise<boolean> {
+    // In a real implementation, this would check against a role table or field
+    // For now, just hardcode the admin user ID to 1
+    return userId === 1;
   }
 
   // Product operations
@@ -109,6 +127,59 @@ export class MemStorage implements IStorage {
         product.category.toLowerCase().includes(lowercaseQuery)
     );
   }
+  
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const id = this.productIdCounter++;
+    const slug = product.slug || product.name.toLowerCase().replace(/\s+/g, '-');
+    const newProduct: Product = {
+      ...product,
+      id,
+      slug,
+      shortDescription: product.shortDescription || null,
+      comparePrice: product.comparePrice || null,
+      badge: product.badge || null,
+      imageGallery: product.imageGallery || [product.imageUrl],
+      inStock: product.inStock !== undefined ? product.inStock : true,
+      stockQuantity: product.stockQuantity || 0,
+      featured: product.featured || false,
+      nutritionFacts: product.nutritionFacts || null,
+      cookingInstructions: product.cookingInstructions || null
+    };
+    this.products.set(id, newProduct);
+    return newProduct;
+  }
+  
+  async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product | undefined> {
+    const existingProduct = this.products.get(id);
+    if (!existingProduct) return undefined;
+    
+    const updatedProduct: Product = {
+      ...existingProduct,
+      ...product,
+      // Ensure required fields maintain their values
+      id: existingProduct.id,
+      slug: product.slug || existingProduct.slug
+    };
+    
+    // Update image gallery if main image changed
+    if (product.imageUrl && !product.imageGallery) {
+      const gallery = [...(existingProduct.imageGallery || [])];
+      // Replace first image or add if empty
+      if (gallery.length > 0) {
+        gallery[0] = product.imageUrl;
+      } else {
+        gallery.push(product.imageUrl);
+      }
+      updatedProduct.imageGallery = gallery;
+    }
+    
+    this.products.set(id, updatedProduct);
+    return updatedProduct;
+  }
+  
+  async deleteProduct(id: number): Promise<void> {
+    this.products.delete(id);
+  }
 
   // Cart operations
   async getCartItems(sessionId: string): Promise<CartItem[]> {
@@ -126,7 +197,14 @@ export class MemStorage implements IStorage {
   async addToCart(insertCartItem: InsertCartItem): Promise<CartItem> {
     const id = this.cartItemIdCounter++;
     const now = new Date();
-    const cartItem: CartItem = { ...insertCartItem, id, createdAt: now };
+    const cartItem: CartItem = { 
+      ...insertCartItem, 
+      id, 
+      createdAt: now,
+      userId: insertCartItem.userId || null,
+      sessionId: insertCartItem.sessionId || null,
+      quantity: insertCartItem.quantity || 1
+    };
     this.cartItems.set(id, cartItem);
     return cartItem;
   }
@@ -157,6 +235,10 @@ export class MemStorage implements IStorage {
     const contact: Contact = { ...insertContact, id, createdAt: now };
     this.contacts.set(id, contact);
     return contact;
+  }
+  
+  async getContacts(): Promise<Contact[]> {
+    return Array.from(this.contacts.values());
   }
 
   // Initialize products
