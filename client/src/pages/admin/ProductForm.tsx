@@ -34,7 +34,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { 
+  ArrowLeft, 
+  Loader2, 
+  Plus, 
+  X, 
+  FileImage,
+  Star, 
+  ShoppingCart,
+  Info,
+  Settings,
+  ImageIcon,
+  Weight,
+  Utensils, 
+  Leaf
+} from "lucide-react";
 import { insertProductSchema, type Product } from "@shared/schema";
 import { z } from "zod";
 
@@ -81,6 +98,9 @@ export default function ProductForm() {
       featured: false,
       nutritionFacts: "",
       cookingInstructions: "",
+      rating: "",
+      reviewCount: 0,
+      weightOptions: [],
     },
   });
 
@@ -113,6 +133,9 @@ export default function ProductForm() {
         featured: product.featured === true,
         nutritionFacts: product.nutritionFacts || "",
         cookingInstructions: product.cookingInstructions || "",
+        rating: product.rating || "",
+        reviewCount: product.reviewCount || 0,
+        weightOptions: product.weightOptions || [],
       });
     } catch (error) {
       console.error("Error fetching product:", error);
@@ -499,6 +522,75 @@ export default function ProductForm() {
                               value={field.value || ""}
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                      <FormField
+                        control={form.control}
+                        name="rating"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Product Rating</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="4.5" 
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Product rating between 0-5 (e.g., 4.5)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="reviewCount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Reviews</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0"
+                                placeholder="0" 
+                                {...field}
+                                onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                                value={field.value || 0}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="weightOptions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Weight Options</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="250g, 500g, 1kg (comma separated)" 
+                              {...field}
+                              value={(field.value || []).join(", ")}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value.split(",").map(option => option.trim()).filter(Boolean));
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Enter comma-separated weight options (e.g., "250g, 500g, 1kg")
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

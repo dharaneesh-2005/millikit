@@ -143,7 +143,11 @@ export class MemStorage implements IStorage {
       stockQuantity: product.stockQuantity || 0,
       featured: product.featured || false,
       nutritionFacts: product.nutritionFacts || null,
-      cookingInstructions: product.cookingInstructions || null
+      cookingInstructions: product.cookingInstructions || null,
+      rating: product.rating || null,
+      reviewCount: product.reviewCount || 0,
+      weightOptions: product.weightOptions || [],
+      createdAt: new Date()
     };
     this.products.set(id, newProduct);
     return newProduct;
@@ -158,7 +162,8 @@ export class MemStorage implements IStorage {
       ...product,
       // Ensure required fields maintain their values
       id: existingProduct.id,
-      slug: product.slug || existingProduct.slug
+      slug: product.slug || existingProduct.slug,
+      createdAt: existingProduct.createdAt // Ensure createdAt is preserved
     };
     
     // Update image gallery if main image changed
@@ -284,7 +289,11 @@ export class MemStorage implements IStorage {
             zinc: "2.4mg (16% DV)"
           }
         }),
-        cookingInstructions: "Rinse 1 cup of foxtail millet under cold water until the water runs clear. In a pot, add 2.5 cups of water and the rinsed millet. Bring to a boil, then reduce heat to low and cover with a lid. Simmer for 15-20 minutes or until all the water is absorbed and the millet is tender. Remove from heat and let it sit, covered, for 5 minutes. Fluff with a fork before serving."
+        cookingInstructions: "Rinse 1 cup of foxtail millet under cold water until the water runs clear. In a pot, add 2.5 cups of water and the rinsed millet. Bring to a boil, then reduce heat to low and cover with a lid. Simmer for 15-20 minutes or until all the water is absorbed and the millet is tender. Remove from heat and let it sit, covered, for 5 minutes. Fluff with a fork before serving.",
+        rating: "4.8",
+        reviewCount: 42,
+        weightOptions: ["250g", "500g", "1kg"],
+        createdAt: new Date()
       },
       {
         id: this.productIdCounter++,
@@ -304,7 +313,11 @@ export class MemStorage implements IStorage {
         stockQuantity: 15,
         featured: true,
         nutritionFacts: null,
-        cookingInstructions: null
+        cookingInstructions: null,
+        rating: "4.6",
+        reviewCount: 28,
+        weightOptions: ["500g", "1kg"],
+        createdAt: new Date()
       },
       {
         id: this.productIdCounter++,
@@ -324,7 +337,11 @@ export class MemStorage implements IStorage {
         stockQuantity: 18,
         featured: true,
         nutritionFacts: null,
-        cookingInstructions: null
+        cookingInstructions: null,
+        rating: "4.5",
+        reviewCount: 32,
+        weightOptions: ["250g", "500g", "750g"],
+        createdAt: new Date()
       },
       {
         id: this.productIdCounter++,
@@ -344,7 +361,11 @@ export class MemStorage implements IStorage {
         stockQuantity: 22,
         featured: false,
         nutritionFacts: null,
-        cookingInstructions: null
+        cookingInstructions: null,
+        rating: "4.3",
+        reviewCount: 18,
+        weightOptions: ["250g", "500g"],
+        createdAt: new Date()
       },
       {
         id: this.productIdCounter++,
@@ -364,7 +385,11 @@ export class MemStorage implements IStorage {
         stockQuantity: 10,
         featured: false,
         nutritionFacts: null,
-        cookingInstructions: null
+        cookingInstructions: null,
+        rating: "4.2",
+        reviewCount: 15,
+        weightOptions: ["500g", "1kg"],
+        createdAt: new Date()
       },
       {
         id: this.productIdCounter++,
@@ -384,7 +409,11 @@ export class MemStorage implements IStorage {
         stockQuantity: 12,
         featured: false,
         nutritionFacts: null,
-        cookingInstructions: null
+        cookingInstructions: null,
+        rating: "4.0",
+        reviewCount: 12,
+        weightOptions: ["250g", "500g"],
+        createdAt: new Date()
       },
       {
         id: this.productIdCounter++,
@@ -404,7 +433,11 @@ export class MemStorage implements IStorage {
         stockQuantity: 7,
         featured: false,
         nutritionFacts: null,
-        cookingInstructions: null
+        cookingInstructions: null,
+        rating: "4.7",
+        reviewCount: 24,
+        weightOptions: ["250g", "400g"],
+        createdAt: new Date()
       },
       {
         id: this.productIdCounter++,
@@ -424,7 +457,11 @@ export class MemStorage implements IStorage {
         stockQuantity: 20,
         featured: false,
         nutritionFacts: null,
-        cookingInstructions: null
+        cookingInstructions: null,
+        rating: "4.4",
+        reviewCount: 19,
+        weightOptions: ["250g", "500g", "1kg"],
+        createdAt: new Date()
       }
     ];
 

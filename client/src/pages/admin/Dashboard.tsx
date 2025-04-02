@@ -366,6 +366,16 @@ export default function AdminDashboard() {
             return parseFloat(b.price) - parseFloat(a.price);
           case "category":
             return a.category.localeCompare(b.category);
+          case "date-asc":
+            if (!a.createdAt && !b.createdAt) return 0;
+            if (!a.createdAt) return 1;
+            if (!b.createdAt) return -1;
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case "date-desc":
+            if (!a.createdAt && !b.createdAt) return 0;
+            if (!a.createdAt) return 1;
+            if (!b.createdAt) return -1;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           default:
             return 0;
         }
@@ -531,6 +541,8 @@ export default function AdminDashboard() {
                                 <SelectItem value="price-asc">Price (Low to High)</SelectItem>
                                 <SelectItem value="price-desc">Price (High to Low)</SelectItem>
                                 <SelectItem value="category">Category</SelectItem>
+                                <SelectItem value="date-asc">Date (Oldest First)</SelectItem>
+                                <SelectItem value="date-desc">Date (Newest First)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -598,6 +610,7 @@ export default function AdminDashboard() {
                                 <TableHead>Image</TableHead>
                                 <TableHead>Product Information</TableHead>
                                 <TableHead>Price</TableHead>
+                                <TableHead>Created At</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
@@ -647,6 +660,18 @@ export default function AdminDashboard() {
                                           ₹{formatPrice(product.comparePrice)}
                                         </div>
                                       )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm">
+                                      {product.createdAt ? 
+                                        new Date(product.createdAt).toLocaleString('en-US', {
+                                          year: 'numeric', 
+                                          month: 'short', 
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        }) : 'N/A'}
                                     </div>
                                   </TableCell>
                                   <TableCell>
@@ -778,7 +803,14 @@ export default function AdminDashboard() {
                                 <CardDescription>{contact.email}</CardDescription>
                               </div>
                               <div className="text-sm text-gray-500">
-                                {contact.createdAt ? new Date(contact.createdAt).toLocaleDateString() : ''}
+                                {contact.createdAt ? 
+                                  new Date(contact.createdAt).toLocaleString('en-US', {
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) : ''}
                               </div>
                             </div>
                           </CardHeader>
@@ -1024,7 +1056,14 @@ export default function AdminDashboard() {
                                   <span className="text-sm truncate max-w-[150px]">{product.name}</span>
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : ''}
+                                  {product.createdAt ? 
+                                    new Date(product.createdAt).toLocaleString('en-US', {
+                                      year: 'numeric', 
+                                      month: 'short', 
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    }) : ''}
                                 </div>
                               </div>
                             ))}

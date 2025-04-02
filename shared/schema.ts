@@ -38,10 +38,15 @@ export const products = pgTable("products", {
   featured: boolean("featured").default(false),
   nutritionFacts: text("nutrition_facts"),
   cookingInstructions: text("cooking_instructions"),
+  rating: decimal("rating", { precision: 3, scale: 2 }),
+  reviewCount: integer("review_count").default(0),
+  weightOptions: text("weight_options").array(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
+  createdAt: true,
 });
 
 export const cartItems = pgTable("cart_items", {
