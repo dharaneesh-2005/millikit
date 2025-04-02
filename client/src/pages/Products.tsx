@@ -22,6 +22,7 @@ export default function Products() {
   // Fetch products by search if query exists
   const { data: searchResults, isLoading: isSearchLoading } = useQuery<Product[]>({
     queryKey: ["/api/products/search", debouncedQuery],
+    queryFn: () => fetch(`/api/products/search?q=${encodeURIComponent(debouncedQuery)}`).then(res => res.json()),
     enabled: debouncedQuery.length > 0,
   });
   

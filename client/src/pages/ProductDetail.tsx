@@ -39,6 +39,11 @@ export default function ProductDetail() {
     }
   }, [product]);
   
+  // Handle clicking on gallery thumbnail
+  const handleImageClick = (image: string) => {
+    setMainImage(image);
+  };
+  
   // Set page title
   useEffect(() => {
     if (product) {
@@ -151,6 +156,17 @@ export default function ProductDetail() {
                 />
               </div>
               <div className="product-image-gallery grid grid-cols-4 gap-2">
+                {/* Main product image thumbnail */}
+                <img 
+                  src={product.imageUrl} 
+                  alt={`${product.name} - Main`} 
+                  className={`w-full h-24 object-cover rounded-lg border-2 cursor-pointer ${
+                    mainImage === product.imageUrl ? 'border-green-500' : 'border-transparent'
+                  }`}
+                  onClick={() => handleImageClick(product.imageUrl)}
+                />
+                
+                {/* Additional gallery images */}
                 {product.imageGallery?.map((img, index) => (
                   <img 
                     key={index}
@@ -159,7 +175,7 @@ export default function ProductDetail() {
                     className={`w-full h-24 object-cover rounded-lg border-2 cursor-pointer ${
                       mainImage === img ? 'border-green-500' : 'border-transparent'
                     }`}
-                    onClick={() => changeMainImage(img)}
+                    onClick={() => handleImageClick(img)}
                   />
                 ))}
               </div>
