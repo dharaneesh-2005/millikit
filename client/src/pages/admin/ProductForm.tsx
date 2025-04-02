@@ -156,6 +156,13 @@ export default function ProductForm() {
       if (!data.imageGallery || !data.imageGallery.length) {
         data.imageGallery = [data.imageUrl];
       }
+      
+      // Generate slug from product name if not editing an existing product
+      if (!isEditMode) {
+        // Generate a slug from the product name (convert to lowercase, replace spaces with hyphens)
+        const slug = data.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        data = { ...data, slug };
+      }
 
       const url = isEditMode
         ? `/api/admin/products/${productId}`
