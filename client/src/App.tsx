@@ -10,8 +10,10 @@ import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import ProductForm from "@/pages/admin/ProductForm";
+import AdminLogin from "@/pages/admin/Login";
 import { CartProvider } from "@/contexts/CartContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AdminProtectedRoute } from "@/components/AdminProtectedRoute";
 
 function PublicRoutes() {
   return (
@@ -34,10 +36,28 @@ function App() {
     <LanguageProvider>
       <CartProvider>
         <Switch>
-          {/* Admin Routes */}
-          <Route path="/admin" component={AdminDashboard} />
-          <Route path="/admin/products/new" component={ProductForm} />
-          <Route path="/admin/products/:id" component={ProductForm} />
+          {/* Admin Auth Route */}
+          <Route path="/admin/login" component={AdminLogin} />
+          
+          {/* Protected Admin Routes */}
+          <Route path="/admin">
+            <AdminProtectedRoute
+              path="/admin"
+              component={AdminDashboard}
+            />
+          </Route>
+          <Route path="/admin/products/new">
+            <AdminProtectedRoute
+              path="/admin/products/new"
+              component={ProductForm}
+            />
+          </Route>
+          <Route path="/admin/products/:id">
+            <AdminProtectedRoute
+              path="/admin/products/:id"
+              component={ProductForm}
+            />
+          </Route>
           
           {/* Public Routes - must be last to allow other routes to match first */}
           <Route component={PublicRoutes} />

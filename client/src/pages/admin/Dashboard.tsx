@@ -65,7 +65,8 @@ import {
   Banknote,
   PackageCheck,
   ChevronDown,
-  AlertTriangle
+  AlertTriangle,
+  LogOut
 } from "lucide-react";
 import type { Product, Contact } from "@shared/schema";
 import { formatPrice } from "@/lib/cart";
@@ -411,6 +412,21 @@ export default function AdminDashboard() {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Link>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() => {
+                sessionStorage.removeItem("adminAuthenticated");
+                window.location.href = "/admin/login";
+                toast({
+                  title: "Logged out successfully",
+                  description: "You have been logged out of the admin area",
+                });
+              }}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>

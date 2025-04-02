@@ -85,7 +85,7 @@ export default function Header() {
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
             >
-              <Link href="/admin" className="text-gray-700 hover:text-green-600 transition-colors">
+              <Link href="/admin/login" className="text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-user-shield text-xl"></i>
               </Link>
             </motion.div>
@@ -135,7 +135,7 @@ export default function Header() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              {['/', '/products', '/contact', '/admin'].map((path, index) => (
+              {['/', '/products', '/contact', '/admin/login'].map((path, index) => (
                 <motion.div
                   key={path}
                   initial={{ opacity: 0, x: -10 }}
@@ -143,8 +143,8 @@ export default function Header() {
                   transition={{ delay: 0.1 * index, duration: 0.3 }}
                 >
                   <Link 
-                    href={path === '/' ? path : path.substring(1)}
-                    className={`block py-2 ${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600' : 'text-gray-700 hover:text-green-600'} transition-colors`}
+                    href={path === '/' ? path : path}
+                    className={`block py-2 ${isActivePath(path === '/' ? path : path) ? 'text-green-600' : 'text-gray-700 hover:text-green-600'} transition-colors`}
                     onClick={() => setShowMobileMenu(false)}
                   >
                     {path === '/' ? t('home') : 
