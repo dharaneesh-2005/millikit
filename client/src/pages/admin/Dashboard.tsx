@@ -134,9 +134,10 @@ export default function AdminDashboard() {
 
   const fetchContacts = async () => {
     try {
+      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch("/api/admin/contacts", {
         headers: {
-          "x-admin-key": ADMIN_KEY,
+          "admin-session-id": sessionId || "",
         },
       });
       if (!response.ok) throw new Error("Failed to fetch contacts");
@@ -154,10 +155,11 @@ export default function AdminDashboard() {
 
   const deleteProduct = async (productId: number) => {
     try {
+      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch(`/api/admin/products/${productId}`, {
         method: "DELETE",
         headers: {
-          "x-admin-key": ADMIN_KEY,
+          "admin-session-id": sessionId || "",
         },
       });
       
@@ -185,11 +187,12 @@ export default function AdminDashboard() {
 
   const toggleProductFeatured = async (product: Product) => {
     try {
+      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch(`/api/admin/products/${product.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-key": ADMIN_KEY,
+          "admin-session-id": sessionId || "",
         },
         body: JSON.stringify({
           featured: !product.featured,
@@ -221,11 +224,12 @@ export default function AdminDashboard() {
 
   const toggleProductInStock = async (product: Product) => {
     try {
+      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch(`/api/admin/products/${product.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-key": ADMIN_KEY,
+          "admin-session-id": sessionId || "",
         },
         body: JSON.stringify({
           inStock: !product.inStock,
@@ -257,13 +261,14 @@ export default function AdminDashboard() {
 
   const bulkDeleteProducts = async () => {
     try {
+      const sessionId = sessionStorage.getItem("adminSessionId");
       // Execute delete operations in parallel
       await Promise.all(
         selectedProductIds.map(id => 
           fetch(`/api/admin/products/${id}`, {
             method: "DELETE",
             headers: {
-              "x-admin-key": ADMIN_KEY,
+              "admin-session-id": sessionId || "",
             },
           })
         )
@@ -309,6 +314,7 @@ export default function AdminDashboard() {
 
   const bulkSetFeatured = async (featured: boolean) => {
     try {
+      const sessionId = sessionStorage.getItem("adminSessionId");
       // Execute update operations in parallel
       await Promise.all(
         selectedProductIds.map(id => 
@@ -316,7 +322,7 @@ export default function AdminDashboard() {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
-              "x-admin-key": ADMIN_KEY,
+              "admin-session-id": sessionId || "",
             },
             body: JSON.stringify({ featured }),
           })
@@ -435,6 +441,7 @@ export default function AdminDashboard() {
               className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
               onClick={() => {
                 sessionStorage.removeItem("adminAuthenticated");
+                sessionStorage.removeItem("adminSessionId");
                 window.location.href = "/admin/login";
                 toast({
                   title: "Logged out successfully",

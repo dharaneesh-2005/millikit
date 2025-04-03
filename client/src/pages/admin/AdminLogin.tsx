@@ -107,6 +107,10 @@ export default function AdminLogin() {
         });
       } else if (result.success) {
         // No OTP required, directly log in
+        // Store admin session ID in sessionStorage
+        sessionStorage.setItem("adminSessionId", result.sessionId);
+        sessionStorage.setItem("adminAuthenticated", "true");
+        
         toast({
           title: "Login successful",
           description: "Welcome to admin dashboard",
@@ -139,6 +143,10 @@ export default function AdminLogin() {
       const result = await response.json();
       
       if (result.success) {
+        // Store the admin session ID in sessionStorage
+        sessionStorage.setItem("adminSessionId", result.sessionId);
+        sessionStorage.setItem("adminAuthenticated", "true");
+        
         toast({
           title: "Login successful",
           description: "Welcome to admin dashboard",
