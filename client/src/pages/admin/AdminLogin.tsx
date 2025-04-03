@@ -80,6 +80,8 @@ export default function AdminLogin() {
       if (result.otpRequired) {
         // User has OTP enabled, show OTP form
         setUserId(result.userId);
+        // Reset OTP form to make sure it's clean
+        otpForm.reset({ token: "" });
         setShowOtpForm(true);
         toast({
           title: "OTP Required",
@@ -368,13 +370,13 @@ export default function AdminLogin() {
                             <FormControl>
                               <div className="relative">
                                 <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                <Input
+                                <input
                                   type="text"
                                   placeholder="Enter 6-digit code"
-                                  className="pl-10 text-center tracking-widest text-lg"
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
                                   maxLength={6}
                                   value={field.value}
-                                  onChange={field.onChange}
+                                  onChange={(e) => field.onChange(e.target.value)}
                                   onBlur={field.onBlur}
                                   name={field.name}
                                 />
@@ -390,7 +392,10 @@ export default function AdminLogin() {
                           type="button"
                           variant="outline"
                           className="flex-1"
-                          onClick={() => setShowOtpForm(false)}
+                          onClick={() => {
+                            otpForm.reset({ token: "" });
+                            setShowOtpForm(false);
+                          }}
                         >
                           Back
                         </Button>
@@ -539,13 +544,13 @@ export default function AdminLogin() {
                               <FormControl>
                                 <div className="relative">
                                   <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                  <Input
+                                  <input
                                     type="text"
                                     placeholder="Enter the 6-digit code"
-                                    className="pl-10 text-center tracking-widest text-lg"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
                                     maxLength={6}
                                     value={field.value}
-                                    onChange={field.onChange}
+                                    onChange={(e) => field.onChange(e.target.value)}
                                     onBlur={field.onBlur}
                                     name={field.name}
                                   />
