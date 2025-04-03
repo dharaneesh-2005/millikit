@@ -1,40 +1,45 @@
-import { useEffect, useState } from "react";
-import { Redirect } from "wouter";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { Loader2 } from "lucide-react";
+import { Redirect, Route, RouteProps } from "wouter";
+import { ReactNode } from "react";
 
-export function AdminProtectedRoute({
-  path,
-  component: Component,
-}: {
-  path: string;
-  component: React.ComponentType;
-}) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+interface AdminProtectedRouteProps extends RouteProps {
+  children: ReactNode;
+}
 
-  useEffect(() => {
-    // Check if admin is authenticated
-    const checkAuthentication = () => {
-      const adminAuth = sessionStorage.getItem("adminAuthenticated");
-      setIsAuthenticated(adminAuth === "true");
-    };
-
-    checkAuthentication();
-  }, []);
-
-  // Show loading state while checking authentication
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-      </div>
-    );
-  }
-
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return <Redirect to="/admin/login" />;
-  }
-
-  // Render the protected component if authenticated
-  return <Component />;
+/**
+ * A route that requires admin authentication
+ * Redirects to login page if not authenticated
+ */
+export function AdminProtectedRoute({ children, ...rest }: AdminProtectedRouteProps) {
+  const { isAuthenticated, isLoading, adminUser } = useAdminAuth();
+  
+  return (
+    <Route
+      {...rest}
+      component={() => {
+        // Show loading spinner while checking authentication
+        if (isLoading) {
+          return (
+            <div className="flex justify-center items-center h-screen">
+              <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+            </div>
+          );
+        }
+        
+        // Redirect to login if not authenticated
+        if (!isAuthenticated || !adminUser) {
+          return <Redirect to="/admin/login" />;
+        }
+        
+        // Redirect to home if authenticated but not admin
+        if (!adminUser.isAdmin) {
+          return <Redirect to="/" />;
+        }
+        
+        // Render the protected content
+        return <>{children}</>;
+      }}
+    />
+  );
 }

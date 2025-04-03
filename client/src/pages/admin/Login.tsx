@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Form,
   FormControl,
@@ -16,13 +17,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Login form schema
+// Phase 1: Initial login with username/password
 const loginSchema = z.object({
   username: z.string().min(1, { message: "Username is required" }),
   password: z.string().min(1, { message: "Password is required" }),
 });
 
+// Phase 2: Two-factor authentication
+const otpSchema = z.object({
+  token: z.string().min(6, { message: "OTP code must be at least 6 digits" }).max(6)
+});
+
 type LoginFormValues = z.infer<typeof loginSchema>;
+type OtpFormValues = z.infer<typeof otpSchema>;
 
 // For this demo, hardcoded credentials
 const ADMIN_USERNAME = "admin";
@@ -34,30 +41,127 @@ export default function AdminLogin() {
     // Check if already authenticated
     return sessionStorage.getItem("adminAuthenticated") === "true";
   });
+  
+  // Determines which form to show: login or 2FA
+  const [loginPhase, setLoginPhase] = useState<"credentials" | "otp">("credentials");
+  
+  // For storing QR code data when setting up 2FA for the first time
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  
+  // Store user ID after successful login for 2FA verification
+  const [userId, setUserId] = useState<number | null>(null);
 
-  const form = useForm<LoginFormValues>({
+  const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
     },
   });
+  
+  const otpForm = useForm<OtpFormValues>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: {
+      token: "",
+    },
+  });
 
-  const onSubmit = async (data: LoginFormValues) => {
-    // Simple authentication check (in a real app, this would be a server request)
-    if (data.username === ADMIN_USERNAME && data.password === ADMIN_PASSWORD) {
-      // Set authenticated in session storage
-      sessionStorage.setItem("adminAuthenticated", "true");
-      setIsAuthenticated(true);
+  const onLoginSubmit = async (data: LoginFormValues) => {
+    try {
+      const response = await apiRequest("POST", "/api/admin/login", data);
+      const result = await response.json();
       
-      toast({
-        title: "Login successful",
-        description: "Welcome to the admin dashboard!",
-      });
-    } else {
+      if (response.ok) {
+        // If 2FA is already set up, proceed to OTP verification
+        if (result.otpRequired) {
+          setUserId(result.userId);
+          setLoginPhase("otp");
+          toast({
+            title: "2FA Required",
+            description: "Please enter the code from your Google Authenticator app",
+          });
+        }
+        // If no 2FA is required (first login or 2FA not enabled)
+        else if (result.sessionId) {
+          // Store session ID for API requests
+          sessionStorage.setItem("adminSessionId", result.sessionId);
+          sessionStorage.setItem("adminAuthenticated", "true");
+          setIsAuthenticated(true);
+          toast({
+            title: "Login successful",
+            description: "Welcome to the admin dashboard!",
+          });
+        }
+        // If we need to set up OTP first time
+        else if (result.success) {
+          // Request OTP setup
+          const setupResponse = await apiRequest("POST", "/api/admin/setup-otp", {
+            userId: result.userId
+          });
+          const setupResult = await setupResponse.json();
+          
+          if (setupResponse.ok && setupResult.qrCodeUrl) {
+            setQrCode(setupResult.qrCodeUrl);
+            setUserId(result.userId);
+            setLoginPhase("otp");
+            toast({
+              title: "2FA Setup Required",
+              description: "Please scan the QR code with Google Authenticator app and enter the code",
+            });
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Setup failed",
+              description: setupResult.message || "Failed to set up 2FA",
+            });
+          }
+        }
+      } else {
+        throw new Error(result.message || "Invalid username or password");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: "Invalid username or password",
+        description: error instanceof Error ? error.message : "Invalid username or password",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const onOtpSubmit = async (data: OtpFormValues) => {
+    try {
+      if (!userId) {
+        throw new Error("Session expired. Please login again.");
+      }
+      
+      const response = await apiRequest("POST", "/api/admin/verify-otp", {
+        userId,
+        token: data.token
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Store the admin session ID for future API requests
+        if (result.sessionId) {
+          sessionStorage.setItem("adminSessionId", result.sessionId);
+        }
+        
+        sessionStorage.setItem("adminAuthenticated", "true");
+        setIsAuthenticated(true);
+        toast({
+          title: "Login successful",
+          description: "Welcome to the admin dashboard!",
+        });
+      } else {
+        throw new Error(result.message || "Invalid verification code");
+      }
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      toast({
+        title: "Verification failed",
+        description: error instanceof Error ? error.message : "Invalid verification code",
         variant: "destructive",
       });
     }
@@ -66,6 +170,17 @@ export default function AdminLogin() {
   if (isAuthenticated) {
     return <Redirect to="/admin" />;
   }
+
+  // Loading spinner component for button
+  const LoadingSpinner = () => (
+    <span className="flex items-center">
+      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      {loginPhase === "credentials" ? "Logging in..." : "Verifying..."}
+    </span>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-gray-100 p-4">
@@ -84,67 +199,127 @@ export default function AdminLogin() {
           >
             <div className="mb-8 text-center">
               <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Login</h1>
-              <p className="text-gray-600">Enter your credentials to access the dashboard</p>
+              <p className="text-gray-600">
+                {loginPhase === "credentials" 
+                  ? "Enter your credentials to access the dashboard" 
+                  : "Enter the verification code from your authenticator app"}
+              </p>
             </div>
             
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter your username"
-                          className="bg-gray-50"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {loginPhase === "credentials" ? (
+              // Username/Password form
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
+                  <FormField
+                    control={loginForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Enter your username"
+                            className="bg-gray-50"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="Enter your password"
-                          className="bg-gray-50"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={loginForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="password"
+                            placeholder="Enter your password"
+                            className="bg-gray-50"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <Button
-                  type="submit"
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={form.formState.isSubmitting}
-                >
-                  {form.formState.isSubmitting ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Logging in...
-                    </span>
-                  ) : (
-                    "Login"
-                  )}
-                </Button>
-              </form>
-            </Form>
+                  <Button
+                    type="submit"
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    disabled={loginForm.formState.isSubmitting}
+                  >
+                    {loginForm.formState.isSubmitting ? <LoadingSpinner /> : "Login"}
+                  </Button>
+                </form>
+              </Form>
+            ) : (
+              // OTP Verification form
+              <div className="space-y-6">
+                {/* QR Code display for setup */}
+                {qrCode && (
+                  <div className="mb-6 flex flex-col items-center">
+                    <p className="mb-4 text-sm text-gray-600 text-center">
+                      Scan this QR code with Google Authenticator app to set up two-factor authentication:
+                    </p>
+                    <img 
+                      src={qrCode} 
+                      alt="Google Authenticator QR Code" 
+                      className="mx-auto h-48 w-48 border p-2 rounded-md"
+                    />
+                  </div>
+                )}
+                
+                <Form {...otpForm}>
+                  <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-6">
+                    <FormField
+                      control={otpForm.control}
+                      name="token"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Verification Code</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter 6-digit code"
+                              className="bg-gray-50 text-center tracking-widest text-lg font-mono"
+                              maxLength={6}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="flex flex-col space-y-2">
+                      <Button
+                        type="submit"
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        disabled={otpForm.formState.isSubmitting}
+                      >
+                        {otpForm.formState.isSubmitting ? <LoadingSpinner /> : "Verify"}
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setLoginPhase("credentials");
+                          setQrCode(null);
+                          setUserId(null);
+                        }}
+                      >
+                        Back to Login
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </div>
+            )}
           </motion.div>
         </div>
 
