@@ -443,9 +443,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isValidToken = await storage.verifyOtp(user.id, currentOtpToken);
         
         if (!isValidToken) {
-          return res.status(401).json({
+          return res.status(400).json({
             success: false,
-            message: "Invalid current OTP token",
+            message: "Current OTP token required to regenerate 2FA",
             needsCurrentOtp: true,
             userId: user.id
           });

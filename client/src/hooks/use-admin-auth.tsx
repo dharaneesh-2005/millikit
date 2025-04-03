@@ -36,7 +36,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<{ success: boolean; authenticated: boolean; isAdmin: boolean; userId: number; username: string } | null>({
     queryKey: ["/api/admin/session"],
     queryFn: getAdminQueryFn({ on401: "returnNull" }),
-    enabled: isAuthenticated, // Only run when authenticated
+    enabled: true, // Always check session status
     retry: false,
   });
   
