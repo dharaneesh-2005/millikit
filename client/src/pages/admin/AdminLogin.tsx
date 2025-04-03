@@ -70,6 +70,16 @@ export default function AdminLogin() {
     },
   });
   
+  // Reset all form states to clean state
+  const resetAllForms = () => {
+    setShowOtpForm(false);
+    setUserId(null);
+    setQrCodeUrl(null);
+    setOtpSecret(null);
+    loginForm.reset({ username: "admin", password: "" });
+    otpForm.reset({ token: "" });
+  };
+
   // Handle login submission
   const onLoginSubmit = async (data: LoginFormValues) => {
     setIsLoggingIn(true);
@@ -273,11 +283,7 @@ export default function AdminLogin() {
               onValueChange={(value) => {
                 setActiveTab(value);
                 // Reset forms when switching tabs
-                if (value === "login") {
-                  setShowOtpForm(false);
-                  loginForm.reset({ username: "admin", password: "" });
-                  otpForm.reset({ token: "" });
-                }
+                resetAllForms();
               }} 
               className="w-full"
             >
@@ -351,71 +357,109 @@ export default function AdminLogin() {
                     </form>
                   </Form>
                 ) : (
-                  <Form {...otpForm}>
-                    <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
-                      <Alert className="bg-yellow-50 border-yellow-200">
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                        <AlertTitle className="text-yellow-800">Verification Required</AlertTitle>
-                        <AlertDescription className="text-yellow-700">
-                          Please enter the 6-digit code from your Google Authenticator app
-                        </AlertDescription>
-                      </Alert>
-                      
-                      <FormField
-                        control={otpForm.control}
-                        name="token"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Authentication Code</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                <input
-                                  type="text"
-                                  placeholder="Enter 6-digit code"
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
-                                  maxLength={6}
-                                  value={field.value}
-                                  onChange={(e) => field.onChange(e.target.value)}
-                                  onBlur={field.onBlur}
-                                  name={field.name}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="flex space-x-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => {
-                            otpForm.reset({ token: "" });
-                            setShowOtpForm(false);
+                  <div className="space-y-4">
+                    <Alert className="bg-yellow-50 border-yellow-200">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertTitle className="text-yellow-800">Verification Required</AlertTitle>
+                      <AlertDescription className="text-yellow-700">
+                        Please enter the 6-digit code from your Google Authenticator app
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div>
+                      <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Authentication Code
+                      </label>
+                      <div className="relative mt-2">
+                        <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <input
+                          type="text"
+                          placeholder="Enter 6-digit code"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
+                          maxLength={6}
+                          value={otpForm.getValues().token}
+                          onChange={(e) => {
+                            if (/^\d*$/.test(e.target.value) && e.target.value.length <= 6) {
+                              otpForm.setValue("token", e.target.value);
+                            }
                           }}
-                        >
-                          Back
-                        </Button>
-                        <Button
-                          type="submit"
-                          className="flex-1"
-                          disabled={isLoggingIn}
-                        >
-                          {isLoggingIn ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Verifying...
-                            </>
-                          ) : (
-                            "Verify"
-                          )}
-                        </Button>
+                        />
                       </div>
-                    </form>
-                  </Form>
+                      {otpForm.formState.errors.token && (
+                        <p className="text-sm font-medium text-destructive">
+                          {otpForm.formState.errors.token.message}
+                        </p>
+                      )}
+                      {otpForm.getValues().token && otpForm.getValues().token.length !== 6 && (
+                        <p className="text-sm font-medium text-destructive">
+                          OTP code must be 6 digits
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setShowOtpForm(false);
+                          resetAllForms();
+                        }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        disabled={isLoggingIn || otpForm.getValues().token.length !== 6}
+                        onClick={async () => {
+                          if (!userId) return;
+                          setIsLoggingIn(true);
+                          try {
+                            const response = await apiRequest("POST", "/api/admin/verify-otp", {
+                              userId,
+                              token: otpForm.getValues().token,
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                              toast({
+                                title: "Login successful",
+                                description: "Welcome to admin dashboard",
+                              });
+                              navigate("/admin");
+                            } else {
+                              toast({
+                                title: "Verification failed",
+                                description: "Invalid or expired OTP code",
+                                variant: "destructive",
+                              });
+                            }
+                          } catch (error) {
+                            console.error("OTP verification error:", error);
+                            toast({
+                              title: "Verification failed",
+                              description: "An error occurred during OTP verification",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsLoggingIn(false);
+                          }
+                        }}
+                      >
+                        {isLoggingIn ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          "Verify"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </TabsContent>
               
@@ -533,50 +577,91 @@ export default function AdminLogin() {
                       </div>
                     </div>
                     
-                    <Form {...otpForm}>
-                      <form onSubmit={otpForm.handleSubmit(onSetupVerifySubmit)} className="space-y-4">
-                        <FormField
-                          control={otpForm.control}
-                          name="token"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Verification Code</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                  <input
-                                    type="text"
-                                    placeholder="Enter the 6-digit code"
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
-                                    maxLength={6}
-                                    value={field.value}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                    onBlur={field.onBlur}
-                                    name={field.name}
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button
-                          type="submit"
-                          className="w-full"
-                          disabled={isLoggingIn}
-                        >
-                          {isLoggingIn ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Verifying...
-                            </>
-                          ) : (
-                            "Verify & Complete Setup"
-                          )}
-                        </Button>
-                      </form>
-                    </Form>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          Verification Code
+                        </label>
+                        <div className="relative mt-2">
+                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                          <input
+                            type="text"
+                            placeholder="Enter the 6-digit code"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
+                            maxLength={6}
+                            value={otpForm.getValues().token}
+                            onChange={(e) => {
+                              if (/^\d*$/.test(e.target.value) && e.target.value.length <= 6) {
+                                otpForm.setValue("token", e.target.value);
+                              }
+                            }}
+                          />
+                        </div>
+                        {otpForm.getValues().token && otpForm.getValues().token.length !== 6 && (
+                          <p className="text-sm font-medium text-destructive">
+                            OTP code must be 6 digits
+                          </p>
+                        )}
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={isLoggingIn || otpForm.getValues().token.length !== 6}
+                        onClick={async () => {
+                          if (!userId || !otpSecret) return;
+                          
+                          setIsLoggingIn(true);
+                          try {
+                            const response = await apiRequest("POST", "/api/admin/verify-setup", {
+                              userId,
+                              token: otpForm.getValues().token,
+                              secret: otpSecret,
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                              toast({
+                                title: "OTP setup complete",
+                                description: "You can now log in with Google Authenticator",
+                              });
+                              setQrCodeUrl(null);
+                              setOtpSecret(null);
+                              setActiveTab("login");
+                              
+                              // Reset forms
+                              loginForm.reset({ username: "admin", password: "" });
+                              otpForm.reset({ token: "" });
+                            } else {
+                              toast({
+                                title: "Verification failed",
+                                description: "Invalid OTP code. Try again.",
+                                variant: "destructive",
+                              });
+                            }
+                          } catch (error) {
+                            console.error("Setup verification error:", error);
+                            toast({
+                              title: "Verification failed",
+                              description: "An error occurred during verification",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsLoggingIn(false);
+                          }
+                        }}
+                      >
+                        {isLoggingIn ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          "Verify & Complete Setup"
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </TabsContent>
