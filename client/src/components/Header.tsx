@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/LanguageContext";
+import logoPath from "@assets/LOGO-removebg-preview.png";
 
 export default function Header() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -52,7 +53,7 @@ export default function Header() {
           >
             <Link href="/" className="flex items-center space-x-2">
               <motion.img 
-                src="/assets/LOGO-removebg-preview.png" 
+                src={logoPath} 
                 alt="Millikit Logo" 
                 className="h-14 w-auto mr-2" 
                 whileHover={{ rotate: [0, -5, 5, -5, 0], transition: { duration: 0.5 } }}
