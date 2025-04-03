@@ -10,7 +10,8 @@ import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import ProductForm from "@/pages/admin/ProductForm";
-import AdminLogin from "@/pages/admin/Login";
+// Using Admin Login component with Google Authenticator implementation
+import AdminLogin from "@/pages/admin/AdminLogin";
 import AuthPage from "@/pages/auth-page";
 import { CartProvider } from "@/contexts/CartContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";

@@ -229,20 +229,9 @@ export default function Cart() {
                       <span className="text-green-600 font-bold text-xl">₹{total.toFixed(2)}</span>
                     </div>
                     
-                    {user ? (
-                      <Link href="/checkout" className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
-                        {t('proceedToCheckout')}
-                      </Link>
-                    ) : (
-                      <div className="space-y-3">
-                        <Link href="/auth" className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
-                          {t('login')} / {t('register')}
-                        </Link>
-                        <p className="text-sm text-center text-gray-500">
-                          {t('loginNeededForCheckout')}
-                        </p>
-                      </div>
-                    )}
+                    <Link href="/checkout" className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
+                      {t('proceedToCheckout')}
+                    </Link>
                   </div>
                 </div>
               </div>
