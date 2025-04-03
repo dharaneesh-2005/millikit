@@ -263,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin Authentication Routes
   
-  // Admin Login - Only allows the predefined admin user
+  // Admin Login - Only allows the predefined admin user (simplified without OTP)
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -294,16 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if user has OTP enabled
-      if (user.otpEnabled) {
-        return res.status(200).json({
-          success: true,
-          otpRequired: true,
-          userId: user.id
-        });
-      }
-      
-      // Create session if no OTP required
+      // Create session directly without OTP
       const sessionId = nanoid();
       const isUserAdmin = await storage.isAdmin(user.id);
       
@@ -316,7 +307,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({
         success: true,
-        otpRequired: false,
         sessionId,
         userId: user.id,
         username: user.username

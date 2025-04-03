@@ -62,8 +62,8 @@ export class MemStorage implements IStorage {
     // This is the only admin user allowed in the system
     const adminUser: User = {
       id: 1,
-      username: "admin",
-      password: "millikit2023",
+      username: "admin_millikit",
+      password: "the_millikit",
       name: null,
       email: null,
       phone: null,
