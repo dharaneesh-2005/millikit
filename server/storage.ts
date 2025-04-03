@@ -4,6 +4,7 @@ import {
   cartItems, type CartItem, type InsertCartItem,
   contacts, type Contact, type InsertContact
 } from "@shared/schema";
+import { verifyToken } from './otpUtils';
 
 export interface IStorage {
   // User operations
@@ -143,8 +144,7 @@ export class MemStorage implements IStorage {
     const user = this.users.get(userId);
     if (!user || !user.otpSecret || !user.otpEnabled) return false;
     
-    // Import the OTP utilities here to avoid circular dependencies
-    const { verifyToken } = require('./otpUtils');
+    // Use the imported verifyToken function directly
     return verifyToken(token, user.otpSecret);
   }
 

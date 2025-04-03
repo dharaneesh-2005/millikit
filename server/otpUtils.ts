@@ -23,6 +23,7 @@ export async function generateQrCode(username: string, secret: string): Promise<
 // Verify an OTP token
 export function verifyToken(token: string, secret: string): boolean {
   try {
+    // The token parameter is passed as-is without conversion
     return authenticator.verify({ token, secret });
   } catch (error) {
     console.error('Error verifying token:', error);

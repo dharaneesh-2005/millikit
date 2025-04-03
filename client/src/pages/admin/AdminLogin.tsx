@@ -179,10 +179,18 @@ export default function AdminLogin() {
         setOtpSecret(setupResult.secret);
         setActiveTab("setup");
         
-        toast({
-          title: "Setup initialized",
-          description: "Scan the QR code with Google Authenticator",
-        });
+        // Show different toast messages depending on whether 2FA is being reconfigured
+        if (setupResult.alreadyEnabled) {
+          toast({
+            title: "Reconfiguring 2FA",
+            description: "Scan new QR code with Google Authenticator to update your 2FA",
+          });
+        } else {
+          toast({
+            title: "Setup initialized",
+            description: "Scan the QR code with Google Authenticator",
+          });
+        }
       } else {
         throw new Error(setupResult.message || "Failed to setup OTP");
       }
@@ -565,7 +573,8 @@ export default function AdminLogin() {
                       <AlertCircle className="h-4 w-4 text-green-600" />
                       <AlertTitle className="text-green-800">Scan QR Code</AlertTitle>
                       <AlertDescription className="text-green-700">
-                        Scan this QR code with the Google Authenticator app on your phone
+                        Scan this QR code with the Google Authenticator app on your phone. 
+                        {userId === 1 && "This will update your existing 2FA configuration if you already have one."}
                       </AlertDescription>
                     </Alert>
                     
@@ -634,7 +643,9 @@ export default function AdminLogin() {
                             if (result.success) {
                               toast({
                                 title: "OTP setup complete",
-                                description: "You can now log in with Google Authenticator",
+                                description: userId === 1 && qrCodeUrl ? 
+                                  "Your Google Authenticator configuration has been updated successfully" : 
+                                  "You can now log in with Google Authenticator",
                               });
                               setQrCodeUrl(null);
                               setOtpSecret(null);

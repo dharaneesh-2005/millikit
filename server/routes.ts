@@ -432,11 +432,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate QR code for Google Authenticator
       const qrCodeUrl = await generateQrCode(user.username, secret);
       
+      // If OTP is already enabled, warn in the response but still allow regenerating
+      const alreadyEnabled = user.otpEnabled;
+      
       res.status(200).json({
         success: true,
         userId: user.id, // Return the actual user ID
         secret,
-        qrCodeUrl
+        qrCodeUrl,
+        alreadyEnabled: alreadyEnabled
       });
     } catch (error) {
       console.error('OTP setup error:', error);
