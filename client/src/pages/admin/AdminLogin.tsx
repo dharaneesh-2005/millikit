@@ -47,10 +47,12 @@ export default function AdminLogin() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
+  const [otpInputValue, setOtpInputValue] = useState("");
   
   // OTP setup states
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [otpSecret, setOtpSecret] = useState<string | null>(null);
+  const [setupOtpInputValue, setSetupOtpInputValue] = useState("");
   const [activeTab, setActiveTab] = useState("login");
   
   // Setup the login form
@@ -76,6 +78,8 @@ export default function AdminLogin() {
     setUserId(null);
     setQrCodeUrl(null);
     setOtpSecret(null);
+    setOtpInputValue("");
+    setSetupOtpInputValue("");
     loginForm.reset({ username: "admin", password: "" });
     otpForm.reset({ token: "" });
   };
@@ -218,8 +222,10 @@ export default function AdminLogin() {
         setActiveTab("login");
         
         // Reset forms
-        loginForm.reset();
-        otpForm.reset();
+        setOtpInputValue("");
+        setSetupOtpInputValue("");
+        loginForm.reset({ username: "admin", password: "" });
+        otpForm.reset({ token: "" });
       } else {
         toast({
           title: "Verification failed",
@@ -377,10 +383,12 @@ export default function AdminLogin() {
                           placeholder="Enter 6-digit code"
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
                           maxLength={6}
-                          value={otpForm.getValues().token}
+                          value={otpInputValue}
                           onChange={(e) => {
-                            if (/^\d*$/.test(e.target.value) && e.target.value.length <= 6) {
-                              otpForm.setValue("token", e.target.value);
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value) && value.length <= 6) {
+                              setOtpInputValue(value);
+                              otpForm.setValue("token", value);
                             }
                           }}
                         />
@@ -589,10 +597,12 @@ export default function AdminLogin() {
                             placeholder="Enter the 6-digit code"
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
                             maxLength={6}
-                            value={otpForm.getValues().token}
+                            value={setupOtpInputValue}
                             onChange={(e) => {
-                              if (/^\d*$/.test(e.target.value) && e.target.value.length <= 6) {
-                                otpForm.setValue("token", e.target.value);
+                              const value = e.target.value;
+                              if (/^\d*$/.test(value) && value.length <= 6) {
+                                setSetupOtpInputValue(value);
+                                otpForm.setValue("token", value);
                               }
                             }}
                           />
