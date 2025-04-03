@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
+import logoPath from "@assets/LOGO-removebg-preview.png";
 
 export default function Footer() {
   const { t } = useTranslation();
@@ -11,7 +12,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center mb-4">
               <img 
-                src="/assets/LOGO-removebg-preview.png" 
+                src={logoPath} 
                 alt="Millikit Logo" 
                 className="h-16 w-auto mr-2 bg-white/10 rounded-full p-1" 
               />
