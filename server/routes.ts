@@ -398,6 +398,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin OTP Setup - only works for predefined admin user
   app.post("/api/admin/setup-otp", async (req, res) => {
     try {
+      const { username, password } = req.body;
+      
+      // Check if username is admin
+      if (username !== "admin") {
+        return res.status(401).json({
+          success: false,
+          message: "Only the admin user can set up 2FA"
+        });
+      }
+      
       // Get the admin user (only works for the predefined admin user with ID 1)
       const user = await storage.getUser(1); // Use ID 1 which is our predefined admin
       
@@ -405,6 +415,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ 
           success: false,
           message: "Admin user not found" 
+        });
+      }
+      
+      // Verify password
+      if (password !== "millikit2023") {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid admin credentials"
         });
       }
       

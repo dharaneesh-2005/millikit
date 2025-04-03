@@ -147,8 +147,14 @@ export default function AdminLogin() {
   const setupAdminOTP = async () => {
     setIsLoggingIn(true);
     try {
+      // Get admin credentials
+      const credentials = loginForm.getValues();
+      
       // Generate OTP secret and QR code for the predefined admin user
-      const setupResponse = await apiRequest("POST", "/api/admin/setup-otp", {});
+      const setupResponse = await apiRequest("POST", "/api/admin/setup-otp", {
+        username: credentials.username,
+        password: credentials.password
+      });
       const setupResult = await setupResponse.json();
       
       if (setupResult.success) {
@@ -162,7 +168,7 @@ export default function AdminLogin() {
           description: "Scan the QR code with Google Authenticator",
         });
       } else {
-        throw new Error("Failed to setup OTP");
+        throw new Error(setupResult.message || "Failed to setup OTP");
       }
     } catch (error: any) {
       console.error("Setup error:", error);
@@ -262,7 +268,15 @@ export default function AdminLogin() {
           <CardContent className="pt-6">
             <Tabs 
               value={activeTab} 
-              onValueChange={setActiveTab} 
+              onValueChange={(value) => {
+                setActiveTab(value);
+                // Reset forms when switching tabs
+                if (value === "login") {
+                  setShowOtpForm(false);
+                  loginForm.reset({ username: "admin", password: "" });
+                  otpForm.reset({ token: "" });
+                }
+              }} 
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -355,10 +369,14 @@ export default function AdminLogin() {
                               <div className="relative">
                                 <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                 <Input
+                                  type="text"
                                   placeholder="Enter 6-digit code"
                                   className="pl-10 text-center tracking-widest text-lg"
                                   maxLength={6}
-                                  {...field}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
                                 />
                               </div>
                             </FormControl>
@@ -398,34 +416,92 @@ export default function AdminLogin() {
               
               <TabsContent value="setup" className="mt-0">
                 {!qrCodeUrl ? (
-                  <div className="space-y-4">
-                    <Alert className="bg-blue-50 border-blue-200 mb-4">
-                      <AlertCircle className="h-4 w-4 text-blue-600" />
-                      <AlertTitle className="text-blue-800">2FA Setup</AlertTitle>
-                      <AlertDescription className="text-blue-700">
-                        Set up Google Authenticator for secure admin access
-                      </AlertDescription>
-                    </Alert>
-                    
-                    <p className="text-sm text-gray-600 mb-4">
-                      Click the button below to generate a QR code that you can scan with the Google Authenticator app on your phone.
-                    </p>
-                    
-                    <Button
-                      onClick={setupAdminOTP}
-                      className="w-full"
-                      disabled={isLoggingIn}
-                    >
-                      {isLoggingIn ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating QR code...
-                        </>
-                      ) : (
-                        "Generate QR Code"
-                      )}
-                    </Button>
-                  </div>
+                  <Form {...loginForm}>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      if (loginForm.getValues().username === "admin" && 
+                          loginForm.getValues().password === "millikit2023") {
+                        setupAdminOTP();
+                      } else {
+                        toast({
+                          title: "Authentication Failed",
+                          description: "You must enter valid admin credentials to setup 2FA",
+                          variant: "destructive",
+                        });
+                      }
+                    }} className="space-y-4">
+                      <Alert className="bg-blue-50 border-blue-200 mb-4">
+                        <AlertCircle className="h-4 w-4 text-blue-600" />
+                        <AlertTitle className="text-blue-800">2FA Setup</AlertTitle>
+                        <AlertDescription className="text-blue-700">
+                          Set up Google Authenticator for secure admin access
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <FormField
+                        control={loginForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Admin Username</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                <Input 
+                                  placeholder="Enter admin username" 
+                                  className="pl-10" 
+                                  {...field} 
+                                  disabled
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Admin Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                <Input
+                                  type="password"
+                                  placeholder="Enter admin password"
+                                  className="pl-10"
+                                  {...field}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <p className="text-sm text-gray-600 mb-2">
+                        Enter admin credentials to generate a QR code that you can scan with the Google Authenticator app.
+                      </p>
+                      
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={isLoggingIn}
+                      >
+                        {isLoggingIn ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          "Generate QR Code"
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
                 ) : (
                   <div className="space-y-6">
                     <Alert className="bg-green-50 border-green-200">
@@ -464,10 +540,14 @@ export default function AdminLogin() {
                                 <div className="relative">
                                   <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                   <Input
+                                    type="text"
                                     placeholder="Enter the 6-digit code"
                                     className="pl-10 text-center tracking-widest text-lg"
                                     maxLength={6}
-                                    {...field}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    name={field.name}
                                   />
                                 </div>
                               </FormControl>
