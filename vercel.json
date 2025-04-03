@@ -1,14 +1,9 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "package.json", "use": "@vercel/node" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" }
   ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/dist/index.js" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/dist/public/index.html" }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev",
+  "framework": null
 }

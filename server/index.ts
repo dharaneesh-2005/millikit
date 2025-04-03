@@ -56,17 +56,13 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // In production (Vercel), we don't need to explicitly start the server
-  // as Vercel handles the serverless function invocation
-  if (process.env.NODE_ENV !== 'production') {
-    // For local development, serve the app on port 5000
-    const port = process.env.PORT || 5000;
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
-    });
-  }
+  // Configure server for both local development and Vercel deployment
+  const port = process.env.PORT || 5000;
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
 })();
