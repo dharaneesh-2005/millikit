@@ -398,7 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin OTP Setup - only works for predefined admin user
   app.post("/api/admin/setup-otp", async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { username, password, currentOtpToken } = req.body;
       
       // Check if username is admin
       if (username !== "admin") {
@@ -424,6 +424,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: false,
           message: "Invalid admin credentials"
         });
+      }
+      
+      // Check if user already has OTP enabled
+      if (user.otpEnabled && user.otpSecret) {
+        // If user already has OTP enabled, we need to verify the current OTP token
+        // before allowing to generate a new one
+        if (!currentOtpToken) {
+          return res.status(400).json({
+            success: false,
+            message: "Current OTP token required to regenerate 2FA",
+            needsCurrentOtp: true,
+            userId: user.id
+          });
+        }
+        
+        // Verify the current OTP token
+        const isValidToken = await storage.verifyOtp(user.id, currentOtpToken);
+        
+        if (!isValidToken) {
+          return res.status(401).json({
+            success: false,
+            message: "Invalid current OTP token",
+            needsCurrentOtp: true,
+            userId: user.id
+          });
+        }
       }
       
       // Generate OTP secret for user

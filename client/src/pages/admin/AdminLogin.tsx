@@ -53,6 +53,8 @@ export default function AdminLogin() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [otpSecret, setOtpSecret] = useState<string | null>(null);
   const [setupOtpInputValue, setSetupOtpInputValue] = useState("");
+  const [needsCurrentOtp, setNeedsCurrentOtp] = useState(false);
+  const [currentOtpInputValue, setCurrentOtpInputValue] = useState("");
   const [activeTab, setActiveTab] = useState("login");
   
   // Setup the login form
@@ -80,6 +82,8 @@ export default function AdminLogin() {
     setOtpSecret(null);
     setOtpInputValue("");
     setSetupOtpInputValue("");
+    setNeedsCurrentOtp(false);
+    setCurrentOtpInputValue("");
     loginForm.reset({ username: "admin", password: "" });
     otpForm.reset({ token: "" });
   };
@@ -160,7 +164,7 @@ export default function AdminLogin() {
   };
   
   // Setup Admin 2FA
-  const setupAdminOTP = async () => {
+  const setupAdminOTP = async (currentOtp?: string) => {
     setIsLoggingIn(true);
     try {
       // Get admin credentials
@@ -169,7 +173,8 @@ export default function AdminLogin() {
       // Generate OTP secret and QR code for the predefined admin user
       const setupResponse = await apiRequest("POST", "/api/admin/setup-otp", {
         username: credentials.username,
-        password: credentials.password
+        password: credentials.password,
+        currentOtpToken: currentOtp // Include current OTP if provided
       });
       const setupResult = await setupResponse.json();
       
@@ -177,6 +182,7 @@ export default function AdminLogin() {
         setUserId(setupResult.userId);
         setQrCodeUrl(setupResult.qrCodeUrl);
         setOtpSecret(setupResult.secret);
+        setNeedsCurrentOtp(false); // Reset this state
         setActiveTab("setup");
         
         // Show different toast messages depending on whether 2FA is being reconfigured
@@ -191,6 +197,14 @@ export default function AdminLogin() {
             description: "Scan the QR code with Google Authenticator",
           });
         }
+      } else if (setupResult.needsCurrentOtp) {
+        // User already has OTP enabled, need to verify current OTP before generating new one
+        setUserId(setupResult.userId);
+        setNeedsCurrentOtp(true);
+        toast({
+          title: "Verification Required",
+          description: "Please enter your current Google Authenticator code to reconfigure 2FA",
+        });
       } else {
         throw new Error(setupResult.message || "Failed to setup OTP");
       }
@@ -441,6 +455,10 @@ export default function AdminLogin() {
                             const result = await response.json();
                             
                             if (result.success) {
+                              // Store session ID in sessionStorage
+                              sessionStorage.setItem("adminSessionId", result.sessionId);
+                              sessionStorage.setItem("adminAuthenticated", "true");
+                              
                               toast({
                                 title: "Login successful",
                                 description: "Welcome to admin dashboard",
@@ -480,7 +498,76 @@ export default function AdminLogin() {
               </TabsContent>
               
               <TabsContent value="setup" className="mt-0">
-                {!qrCodeUrl ? (
+                {needsCurrentOtp ? (
+                  // When admin needs to verify current OTP before reconfiguring
+                  <div className="space-y-4">
+                    <Alert className="bg-yellow-50 border-yellow-200">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertTitle className="text-yellow-800">Verification Required</AlertTitle>
+                      <AlertDescription className="text-yellow-700">
+                        Please enter your current Google Authenticator code to reconfigure 2FA
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div>
+                      <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Current Authentication Code
+                      </label>
+                      <div className="relative mt-2">
+                        <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <input
+                          type="text"
+                          placeholder="Enter your current 6-digit code"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 text-center tracking-widest text-lg"
+                          maxLength={6}
+                          value={currentOtpInputValue}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value) && value.length <= 6) {
+                              setCurrentOtpInputValue(value);
+                            }
+                          }}
+                        />
+                      </div>
+                      {currentOtpInputValue && currentOtpInputValue.length !== 6 && (
+                        <p className="text-sm font-medium text-destructive">
+                          OTP code must be 6 digits
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setNeedsCurrentOtp(false);
+                          resetAllForms();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        disabled={isLoggingIn || currentOtpInputValue.length !== 6}
+                        onClick={() => {
+                          setupAdminOTP(currentOtpInputValue);
+                        }}
+                      >
+                        {isLoggingIn ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          "Verify & Continue"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : !qrCodeUrl ? (
                   <Form {...loginForm}>
                     <form onSubmit={(e) => {
                       e.preventDefault();
@@ -652,6 +739,10 @@ export default function AdminLogin() {
                               setActiveTab("login");
                               
                               // Reset forms
+                              setOtpInputValue("");
+                              setSetupOtpInputValue("");
+                              setCurrentOtpInputValue("");
+                              setNeedsCurrentOtp(false);
                               loginForm.reset({ username: "admin", password: "" });
                               otpForm.reset({ token: "" });
                             } else {
