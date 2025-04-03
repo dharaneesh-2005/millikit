@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, AlertCircle, Lock, User, KeyRound } from "lucide-react";
 
 // Login Schema
@@ -35,20 +35,9 @@ const otpSchema = z.object({
   token: z.string().min(6, "OTP code must be 6 digits").max(6, "OTP code must be 6 digits"),
 });
 
-// Setup Schema
-const setupSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(1, "Please confirm your password"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
 // Define form types
 type LoginFormValues = z.infer<typeof loginSchema>;
 type OTPFormValues = z.infer<typeof otpSchema>;
-type SetupFormValues = z.infer<typeof setupSchema>;
 
 export default function AdminLogin() {
   const [_, navigate] = useLocation();
@@ -59,19 +48,16 @@ export default function AdminLogin() {
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   
-  // Setup states
-  const [isSettingUp, setIsSettingUp] = useState(false);
+  // OTP setup states
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [otpSecret, setOtpSecret] = useState<string | null>(null);
-  
-  // Tab state
-  const [activeTab, setActiveTab] = useState<string>("login");
+  const [activeTab, setActiveTab] = useState("login");
   
   // Setup the login form
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      username: "admin", // Use the predefined admin username
       password: "",
     },
   });
@@ -81,16 +67,6 @@ export default function AdminLogin() {
     resolver: zodResolver(otpSchema),
     defaultValues: {
       token: "",
-    },
-  });
-  
-  // Setup the setup form
-  const setupForm = useForm<SetupFormValues>({
-    resolver: zodResolver(setupSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-      confirmPassword: "",
     },
   });
   
@@ -167,50 +143,36 @@ export default function AdminLogin() {
     }
   };
   
-  // Handle setup submission
-  const onSetupSubmit = async (data: SetupFormValues) => {
-    setIsSettingUp(true);
+  // Setup Admin 2FA
+  const setupAdminOTP = async () => {
+    setIsLoggingIn(true);
     try {
-      // Step 1: Register the admin user
-      const registerResponse = await apiRequest("POST", "/api/admin/register", {
-        username: data.username,
-        password: data.password,
-      });
+      // Generate OTP secret and QR code for the predefined admin user
+      const setupResponse = await apiRequest("POST", "/api/admin/setup-otp", {});
+      const setupResult = await setupResponse.json();
       
-      const registerResult = await registerResponse.json();
-      
-      if (registerResult.success) {
-        // Step 2: Generate OTP secret and QR code
-        const setupResponse = await apiRequest("POST", "/api/admin/setup-otp", {
-          userId: registerResult.userId,
+      if (setupResult.success) {
+        setUserId(setupResult.userId);
+        setQrCodeUrl(setupResult.qrCodeUrl);
+        setOtpSecret(setupResult.secret);
+        setActiveTab("setup");
+        
+        toast({
+          title: "Setup initialized",
+          description: "Scan the QR code with Google Authenticator",
         });
-        
-        const setupResult = await setupResponse.json();
-        
-        if (setupResult.success) {
-          setUserId(registerResult.userId);
-          setQrCodeUrl(setupResult.qrCodeUrl);
-          setOtpSecret(setupResult.secret);
-          
-          toast({
-            title: "Setup initialized",
-            description: "Scan the QR code with Google Authenticator",
-          });
-        } else {
-          throw new Error("Failed to setup OTP");
-        }
       } else {
-        throw new Error(registerResult.message || "Registration failed");
+        throw new Error("Failed to setup OTP");
       }
     } catch (error: any) {
       console.error("Setup error:", error);
       toast({
         title: "Setup failed",
-        description: error.message || "An error occurred during setup",
+        description: error.message || "An error occurred during OTP setup",
         variant: "destructive",
       });
     } finally {
-      setIsSettingUp(false);
+      setIsLoggingIn(false);
     }
   };
   
@@ -218,7 +180,7 @@ export default function AdminLogin() {
   const onSetupVerifySubmit = async (data: OTPFormValues) => {
     if (!userId || !otpSecret) return;
     
-    setIsSettingUp(true);
+    setIsLoggingIn(true);
     try {
       const response = await apiRequest("POST", "/api/admin/verify-setup", {
         userId,
@@ -230,12 +192,16 @@ export default function AdminLogin() {
       
       if (result.success) {
         toast({
-          title: "Setup complete",
+          title: "OTP setup complete",
           description: "You can now log in with Google Authenticator",
         });
-        setActiveTab("login");
-        setOtpSecret(null);
         setQrCodeUrl(null);
+        setOtpSecret(null);
+        setActiveTab("login");
+        
+        // Reset forms
+        loginForm.reset();
+        otpForm.reset();
       } else {
         toast({
           title: "Verification failed",
@@ -251,7 +217,7 @@ export default function AdminLogin() {
         variant: "destructive",
       });
     } finally {
-      setIsSettingUp(false);
+      setIsLoggingIn(false);
     }
   };
   
@@ -261,7 +227,7 @@ export default function AdminLogin() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-4xl"
+        className="w-full max-w-md"
       >
         <div className="text-center mb-8">
           <motion.img
@@ -289,20 +255,19 @@ export default function AdminLogin() {
               Secure Admin Access
             </CardTitle>
             <CardDescription className="text-green-100">
-              Login with your admin credentials and Google Authenticator
+              Login with admin credentials and Google Authenticator
             </CardDescription>
           </CardHeader>
           
           <CardContent className="pt-6">
             <Tabs 
-              defaultValue="login" 
               value={activeTab} 
               onValueChange={setActiveTab} 
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="setup">First-Time Setup</TabsTrigger>
+                <TabsTrigger value="setup">Set up 2FA</TabsTrigger>
               </TabsList>
               
               <TabsContent value="login" className="mt-0">
@@ -322,6 +287,7 @@ export default function AdminLogin() {
                                   placeholder="Enter your username" 
                                   className="pl-10" 
                                   {...field} 
+                                  disabled
                                 />
                               </div>
                             </FormControl>
@@ -432,97 +398,34 @@ export default function AdminLogin() {
               
               <TabsContent value="setup" className="mt-0">
                 {!qrCodeUrl ? (
-                  <Form {...setupForm}>
-                    <form onSubmit={setupForm.handleSubmit(onSetupSubmit)} className="space-y-4">
-                      <Alert className="bg-blue-50 border-blue-200 mb-4">
-                        <AlertCircle className="h-4 w-4 text-blue-600" />
-                        <AlertTitle className="text-blue-800">First-time setup</AlertTitle>
-                        <AlertDescription className="text-blue-700">
-                          Set up your admin account with Google Authenticator for secure access
-                        </AlertDescription>
-                      </Alert>
-                      
-                      <FormField
-                        control={setupForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Choose Username</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                <Input 
-                                  placeholder="Admin username" 
-                                  className="pl-10" 
-                                  {...field} 
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={setupForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Choose Password</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                <Input
-                                  type="password"
-                                  placeholder="Secure password"
-                                  className="pl-10"
-                                  {...field}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={setupForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirm Password</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                <Input
-                                  type="password"
-                                  placeholder="Confirm password"
-                                  className="pl-10"
-                                  {...field}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={isSettingUp}
-                      >
-                        {isSettingUp ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Setting up...
-                          </>
-                        ) : (
-                          "Continue to Setup"
-                        )}
-                      </Button>
-                    </form>
-                  </Form>
+                  <div className="space-y-4">
+                    <Alert className="bg-blue-50 border-blue-200 mb-4">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertTitle className="text-blue-800">2FA Setup</AlertTitle>
+                      <AlertDescription className="text-blue-700">
+                        Set up Google Authenticator for secure admin access
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <p className="text-sm text-gray-600 mb-4">
+                      Click the button below to generate a QR code that you can scan with the Google Authenticator app on your phone.
+                    </p>
+                    
+                    <Button
+                      onClick={setupAdminOTP}
+                      className="w-full"
+                      disabled={isLoggingIn}
+                    >
+                      {isLoggingIn ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating QR code...
+                        </>
+                      ) : (
+                        "Generate QR Code"
+                      )}
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-6">
                     <Alert className="bg-green-50 border-green-200">
@@ -573,33 +476,20 @@ export default function AdminLogin() {
                           )}
                         />
                         
-                        <div className="flex space-x-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => {
-                              setQrCodeUrl(null);
-                              setOtpSecret(null);
-                            }}
-                          >
-                            Back
-                          </Button>
-                          <Button
-                            type="submit"
-                            className="flex-1"
-                            disabled={isSettingUp}
-                          >
-                            {isSettingUp ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Verifying...
-                              </>
-                            ) : (
-                              "Complete Setup"
-                            )}
-                          </Button>
-                        </div>
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={isLoggingIn}
+                        >
+                          {isLoggingIn ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Verifying...
+                            </>
+                          ) : (
+                            "Verify & Complete Setup"
+                          )}
+                        </Button>
                       </form>
                     </Form>
                   </div>
@@ -607,12 +497,6 @@ export default function AdminLogin() {
               </TabsContent>
             </Tabs>
           </CardContent>
-          
-          <CardFooter className="flex justify-center border-t p-4">
-            <Button variant="link" onClick={() => navigate("/")}>
-              Return to Millikit Store
-            </Button>
-          </CardFooter>
         </Card>
       </motion.div>
     </div>

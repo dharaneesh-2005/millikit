@@ -53,10 +53,31 @@ export class MemStorage implements IStorage {
     this.products = new Map();
     this.cartItems = new Map();
     this.contacts = new Map();
-    this.userIdCounter = 1;
     this.productIdCounter = 1;
     this.cartItemIdCounter = 1;
     this.contactIdCounter = 1;
+    
+    // Create a predefined admin user with ID 1
+    // This is the only admin user allowed in the system
+    const adminUser: User = {
+      id: 1,
+      username: "admin",
+      password: "millikit2023",
+      name: null,
+      email: null,
+      phone: null,
+      address: null,
+      otpSecret: null,
+      otpEnabled: false,
+      isAdmin: true
+    };
+    
+    // Set the admin user directly in the map with ID 1
+    this.users.set(1, adminUser);
+    console.log("Predefined admin user created with ID: 1");
+    
+    // Start user ID counter at 2 to preserve admin as ID 1
+    this.userIdCounter = 2;
 
     // Initialize with some sample products
     this.initProducts();
@@ -91,20 +112,27 @@ export class MemStorage implements IStorage {
   }
   
   async isAdmin(userId: number): Promise<boolean> {
-    // In a real implementation, this would check against a role table or field
-    // For now, just hardcode the admin user ID to 1
-    return userId === 1;
+    // Check if user exists and has isAdmin flag set to true
+    const user = this.users.get(userId);
+    return user ? Boolean(user.isAdmin) : false;
   }
 
   async enableOtp(userId: number, secret: string): Promise<User | undefined> {
     const user = this.users.get(userId);
     if (!user) return undefined;
     
+    // Only allow enabling OTP for the admin user (userId === 1)
+    if (userId !== 1) {
+      console.error("Attempted to enable OTP for non-admin user:", userId);
+      return undefined;
+    }
+    
     const updatedUser = { 
       ...user, 
       otpSecret: secret,
       otpEnabled: true,
-      isAdmin: true // When enabling OTP, we're setting the user as admin
+      // Preserve admin status - should already be true for the predefined admin
+      isAdmin: true
     };
     
     this.users.set(userId, updatedUser);

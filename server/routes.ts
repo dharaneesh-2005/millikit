@@ -263,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin Authentication Routes
   
-  // Admin Login
+  // Admin Login - Only allows the predefined admin user
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -275,9 +275,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Only allow the admin user to log in
       const user = await storage.getUserByUsername(username);
       
-      if (!user) {
+      if (!user || user.id !== 1) {
         return res.status(401).json({ 
           success: false,
           message: "Invalid username or password" 
@@ -385,70 +386,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Admin Registration
+  // Admin Registration - Disabled, only predefined admin allowed
   app.post("/api/admin/register", async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Username and password are required" 
-        });
-      }
-      
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(username);
-      
-      if (existingUser) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Username already exists" 
-        });
-      }
-      
-      // Create new admin user
-      const user = await storage.createUser({
-        username,
-        password,
-        name: null,
-        email: null,
-        phone: null,
-        address: null
-      });
-      
-      res.status(201).json({
-        success: true,
-        userId: user.id,
-        username: user.username
-      });
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ 
-        success: false,
-        message: "An error occurred during registration" 
-      });
-    }
+    // Return error since registration is disabled
+    return res.status(403).json({ 
+      success: false,
+      message: "Registration is disabled. Please use the predefined admin credentials." 
+    });
   });
   
-  // Admin OTP Setup
+  // Admin OTP Setup - only works for predefined admin user
   app.post("/api/admin/setup-otp", async (req, res) => {
     try {
-      const { userId } = req.body;
-      
-      if (!userId) {
-        return res.status(400).json({ 
-          success: false,
-          message: "User ID is required" 
-        });
-      }
-      
-      const user = await storage.getUser(userId);
+      // Get the admin user (only works for the predefined admin user with ID 1)
+      const user = await storage.getUser(1); // Use ID 1 which is our predefined admin
       
       if (!user) {
         return res.status(404).json({ 
           success: false,
-          message: "User not found" 
+          message: "Admin user not found" 
         });
       }
       
@@ -460,6 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({
         success: true,
+        userId: user.id, // Return the actual user ID
         secret,
         qrCodeUrl
       });
