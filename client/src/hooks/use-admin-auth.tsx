@@ -28,6 +28,15 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     return sessionStorage.getItem("adminAuthenticated") === "true";
   });
 
+  // Debug session state
+  useEffect(() => {
+    console.log("AdminAuthProvider initial state:", { 
+      isAuthenticated,
+      sessionId: sessionStorage.getItem("adminSessionId"),
+      adminAuthenticated: sessionStorage.getItem("adminAuthenticated")
+    });
+  }, []);
+
   // Check if admin session is valid
   const {
     data,
@@ -38,7 +47,13 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     queryFn: getAdminQueryFn({ on401: "returnNull" }),
     enabled: true, // Always check session status
     retry: false,
+    refetchOnWindowFocus: true,
   });
+  
+  // Debug query result
+  useEffect(() => {
+    console.log("Admin session query result:", data);
+  }, [data]);
   
   // Convert API response to AdminUser format
   const adminUser: AdminUser | null = data && data.success && data.authenticated ? {
@@ -50,15 +65,17 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   // Effect to update authentication state when data changes
   useEffect(() => {
     if (adminUser && adminUser.isAdmin) {
+      console.log("Setting authenticated = true from valid admin user");
       setIsAuthenticated(true);
       sessionStorage.setItem("adminAuthenticated", "true");
-    } else if (adminUser === null && isAuthenticated) {
-      // If session check failed but we thought we were authenticated
+    } else if (data && (!data.authenticated || !data.success) && isAuthenticated) {
+      // If session check explicitly failed and we thought we were authenticated
+      console.log("Setting authenticated = false from failed session check");
       setIsAuthenticated(false);
       sessionStorage.removeItem("adminAuthenticated");
       sessionStorage.removeItem("adminSessionId");
     }
-  }, [adminUser, isAuthenticated]);
+  }, [data, adminUser, isAuthenticated]);
 
   // Logout mutation
   const logoutMutation = useMutation({

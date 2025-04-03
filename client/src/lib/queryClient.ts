@@ -82,6 +82,19 @@ export const getAdminQueryFn: <T>(options: {
   async ({ queryKey }) => {
     // Get admin session ID from sessionStorage
     const sessionId = sessionStorage.getItem("adminSessionId");
+    const isAdminAuth = sessionStorage.getItem("adminAuthenticated") === "true";
+    
+    console.log("getAdminQueryFn executing with:", { 
+      sessionId, 
+      isAdminAuth, 
+      queryKey 
+    });
+    
+    // If we don't have a session ID and we're not authenticated, return null early
+    if (!sessionId && !isAdminAuth && unauthorizedBehavior === "returnNull") {
+      console.log("No admin session found, returning null");
+      return null;
+    }
     
     // Prepare headers with session ID if available
     const headers: Record<string, string> = {};
@@ -90,17 +103,37 @@ export const getAdminQueryFn: <T>(options: {
       headers["admin-session-id"] = sessionId;
     }
     
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-      headers,
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    try {
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include",
+        headers,
+      });
+  
+      console.log(`Admin API response for ${queryKey[0]}:`, { 
+        status: res.status,
+        ok: res.ok,
+      });
+  
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        // Clear stored session on 401
+        console.log("Received 401, clearing session data");
+        sessionStorage.removeItem("adminAuthenticated");
+        sessionStorage.removeItem("adminSessionId");
+        return null;
+      }
+  
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error) {
+      console.error("Error in admin query function:", error);
+      
+      // If we should return null on error with 401-related errors
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

@@ -178,13 +178,17 @@ export default function AdminLogin() {
       // Get admin credentials
       const credentials = loginForm.getValues();
       
+      console.log("Setting up OTP with current token:", currentOtp);
+      
       // Generate OTP secret and QR code for the predefined admin user
       const setupResponse = await apiRequest("POST", "/api/admin/setup-otp", {
         username: credentials.username,
         password: credentials.password,
         currentOtpToken: currentOtp // Include current OTP if provided
       });
+      
       const setupResult = await setupResponse.json();
+      console.log("Setup OTP response:", setupResult);
       
       if (setupResult.success) {
         setUserId(setupResult.userId);
@@ -209,6 +213,7 @@ export default function AdminLogin() {
         // User already has OTP enabled, need to verify current OTP before generating new one
         setUserId(setupResult.userId);
         setNeedsCurrentOtp(true);
+        
         toast({
           title: "Verification Required",
           description: "Please enter your current Google Authenticator code to reconfigure 2FA",
@@ -461,6 +466,7 @@ export default function AdminLogin() {
                             });
                             
                             const result = await response.json();
+                            console.log("OTP verification result:", result);
                             
                             if (result.success) {
                               // Store session ID in sessionStorage
@@ -471,7 +477,9 @@ export default function AdminLogin() {
                                 title: "Login successful",
                                 description: "Welcome to admin dashboard",
                               });
-                              navigate("/admin");
+                              
+                              // Use window.location to force a full page reload
+                              window.location.href = "/admin";
                             } else {
                               toast({
                                 title: "Verification failed",

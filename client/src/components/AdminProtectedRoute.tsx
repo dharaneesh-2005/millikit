@@ -14,6 +14,15 @@ interface AdminProtectedRouteProps extends RouteProps {
 export function AdminProtectedRoute({ children, ...rest }: AdminProtectedRouteProps) {
   const { isAuthenticated, isLoading, adminUser } = useAdminAuth();
   
+  // For debugging only
+  console.log("AdminProtectedRoute:", { 
+    isAuthenticated, 
+    isLoading, 
+    adminUser, 
+    sessionStorageAuth: sessionStorage.getItem("adminAuthenticated"),
+    path: rest.path
+  });
+  
   return (
     <Route
       {...rest}
@@ -27,13 +36,26 @@ export function AdminProtectedRoute({ children, ...rest }: AdminProtectedRoutePr
           );
         }
         
+        // Check if we have a session ID in storage
+        const sessionId = sessionStorage.getItem("adminSessionId");
+        const isAdminAuth = sessionStorage.getItem("adminAuthenticated") === "true";
+        
+        // If we have session ID but no authenticated state yet, show loading
+        if (sessionId && isAdminAuth && !adminUser) {
+          return (
+            <div className="flex justify-center items-center h-screen">
+              <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+            </div>
+          );
+        }
+        
         // Redirect to login if not authenticated
-        if (!isAuthenticated || !adminUser) {
+        if (!isAuthenticated || !isAdminAuth) {
           return <Redirect to="/admin/login" />;
         }
         
         // Redirect to home if authenticated but not admin
-        if (!adminUser.isAdmin) {
+        if (adminUser && !adminUser.isAdmin) {
           return <Redirect to="/" />;
         }
         
