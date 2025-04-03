@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { calculateCartSummary } from "@/lib/cart";
 
 export default function Cart() {
   const { t } = useTranslation();
   const { cartItems, updateCartItem, removeFromCart, clearCart, isLoading } = useCart();
+  const { user } = useAuth();
   const [quantities, setQuantities] = useState<{ [key: number]: number }>({});
   const { toast } = useToast();
   const { subtotal, shipping, tax, total } = calculateCartSummary(cartItems);
@@ -227,9 +229,20 @@ export default function Cart() {
                       <span className="text-green-600 font-bold text-xl">₹{total.toFixed(2)}</span>
                     </div>
                     
-                    <Link href="/checkout" className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
-                      {t('proceedToCheckout')}
-                    </Link>
+                    {user ? (
+                      <Link href="/checkout" className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
+                        {t('proceedToCheckout')}
+                      </Link>
+                    ) : (
+                      <div className="space-y-3">
+                        <Link href="/auth" className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
+                          {t('login')} / {t('register')}
+                        </Link>
+                        <p className="text-sm text-center text-gray-500">
+                          {t('loginNeededForCheckout')}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

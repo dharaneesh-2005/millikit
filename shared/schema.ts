@@ -10,6 +10,9 @@ export const users = pgTable("users", {
   email: text("email"),
   phone: text("phone"),
   address: text("address"),
+  otpSecret: text("otp_secret"),
+  otpEnabled: boolean("otp_enabled").default(false),
+  isAdmin: boolean("is_admin").default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

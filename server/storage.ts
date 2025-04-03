@@ -11,6 +11,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   isAdmin(userId: number): Promise<boolean>;
+  enableOtp(userId: number, secret: string): Promise<User | undefined>;
+  verifyOtp(userId: number, token: string): Promise<boolean>;
 
   // Product operations
   getProducts(): Promise<Product[]>;
@@ -79,7 +81,10 @@ export class MemStorage implements IStorage {
       name: insertUser.name || null,
       email: insertUser.email || null,
       phone: insertUser.phone || null,
-      address: insertUser.address || null
+      address: insertUser.address || null,
+      otpSecret: null,
+      otpEnabled: false,
+      isAdmin: false
     };
     this.users.set(id, user);
     return user;
@@ -89,6 +94,30 @@ export class MemStorage implements IStorage {
     // In a real implementation, this would check against a role table or field
     // For now, just hardcode the admin user ID to 1
     return userId === 1;
+  }
+
+  async enableOtp(userId: number, secret: string): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    
+    const updatedUser = { 
+      ...user, 
+      otpSecret: secret,
+      otpEnabled: true,
+      isAdmin: true // When enabling OTP, we're setting the user as admin
+    };
+    
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+  
+  async verifyOtp(userId: number, token: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user || !user.otpSecret || !user.otpEnabled) return false;
+    
+    // Import the OTP utilities here to avoid circular dependencies
+    const { verifyToken } = require('./otpUtils');
+    return verifyToken(token, user.otpSecret);
   }
 
   // Product operations
@@ -146,6 +175,7 @@ export class MemStorage implements IStorage {
       cookingInstructions: product.cookingInstructions || null,
       rating: product.rating || null,
       reviewCount: product.reviewCount || 0,
+      reviews: product.reviews || null,
       weightOptions: product.weightOptions || [],
       createdAt: new Date()
     };
@@ -293,6 +323,26 @@ export class MemStorage implements IStorage {
         rating: "4.8",
         reviewCount: 42,
         weightOptions: ["250g", "500g", "1kg"],
+        reviews: JSON.stringify([
+          {
+            id: "r1",
+            name: "Ananya Sharma",
+            avatar: "https://i.pravatar.cc/150?img=32",
+            date: "2023-12-15",
+            rating: 5,
+            comment: "Excellent quality foxtail millet! The packaging was great and the millet cooks perfectly. I've been using it for breakfast porridge and love the nutty flavor.",
+            helpfulCount: 12
+          },
+          {
+            id: "r2",
+            name: "Raj Patel",
+            avatar: "https://i.pravatar.cc/150?img=68",
+            date: "2023-11-22",
+            rating: 4,
+            comment: "Very good product. I've switched from rice to this millet and noticed better digestion. Would recommend for anyone looking for healthier alternatives.",
+            helpfulCount: 8
+          }
+        ]),
         createdAt: new Date()
       },
       {
@@ -317,6 +367,7 @@ export class MemStorage implements IStorage {
         rating: "4.6",
         reviewCount: 28,
         weightOptions: ["500g", "1kg"],
+        reviews: null,
         createdAt: new Date()
       },
       {
@@ -341,6 +392,7 @@ export class MemStorage implements IStorage {
         rating: "4.5",
         reviewCount: 32,
         weightOptions: ["250g", "500g", "750g"],
+        reviews: null,
         createdAt: new Date()
       },
       {
@@ -365,6 +417,7 @@ export class MemStorage implements IStorage {
         rating: "4.3",
         reviewCount: 18,
         weightOptions: ["250g", "500g"],
+        reviews: null,
         createdAt: new Date()
       },
       {
@@ -389,6 +442,7 @@ export class MemStorage implements IStorage {
         rating: "4.2",
         reviewCount: 15,
         weightOptions: ["500g", "1kg"],
+        reviews: null,
         createdAt: new Date()
       },
       {
@@ -413,6 +467,7 @@ export class MemStorage implements IStorage {
         rating: "4.0",
         reviewCount: 12,
         weightOptions: ["250g", "500g"],
+        reviews: null,
         createdAt: new Date()
       },
       {
@@ -437,6 +492,7 @@ export class MemStorage implements IStorage {
         rating: "4.7",
         reviewCount: 24,
         weightOptions: ["250g", "400g"],
+        reviews: null,
         createdAt: new Date()
       },
       {
@@ -461,6 +517,7 @@ export class MemStorage implements IStorage {
         rating: "4.4",
         reviewCount: 19,
         weightOptions: ["250g", "500g", "1kg"],
+        reviews: null,
         createdAt: new Date()
       }
     ];

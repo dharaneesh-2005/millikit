@@ -95,6 +95,12 @@ export const translations = {
     orderPlaced: "Your order has been placed successfully!",
     errorOccurred: "An error occurred. Please try again.",
     
+    // Authentication
+    login: "Login",
+    register: "Register",
+    logout: "Logout",
+    loginNeededForCheckout: "Please login or register to proceed with checkout.",
+    
     // Filter
     filterBy: "Filter by",
     
@@ -104,7 +110,7 @@ export const translations = {
     // Product count
     showing: "Showing",
     of: "of",
-    products: "products"
+    productsCount: "products"
   },
   
   ta: {
@@ -203,6 +209,12 @@ export const translations = {
     orderPlaced: "உங்கள் ஆர்டர் வெற்றிகரமாக வைக்கப்பட்டது!",
     errorOccurred: "பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.",
     
+    // Authentication
+    login: "உள்நுழைய",
+    register: "பதிவு செய்ய",
+    logout: "வெளியேறு",
+    loginNeededForCheckout: "தொடர உள்நுழைய அல்லது பதிவு செய்யவும்.",
+    
     // Filter
     filterBy: "வடிகட்டி",
     
@@ -212,6 +224,6 @@ export const translations = {
     // Product count
     showing: "காட்டுகிறது",
     of: "இல்",
-    products: "தயாரிப்புகள்"
+    productsCount: "தயாரிப்புகள்"
   }
 };

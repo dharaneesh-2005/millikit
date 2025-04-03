@@ -11,9 +11,12 @@ import Checkout from "@/pages/Checkout";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import ProductForm from "@/pages/admin/ProductForm";
 import AdminLogin from "@/pages/admin/Login";
+import AuthPage from "@/pages/auth-page";
 import { CartProvider } from "@/contexts/CartContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider } from "@/hooks/use-auth";
 import { AdminProtectedRoute } from "@/components/AdminProtectedRoute";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function PublicRoutes() {
   return (
@@ -24,7 +27,6 @@ function PublicRoutes() {
         <Route path="/product/:slug" component={ProductDetail} />
         <Route path="/contact" component={Contact} />
         <Route path="/cart" component={Cart} />
-        <Route path="/checkout" component={Checkout} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -34,36 +36,44 @@ function PublicRoutes() {
 function App() {
   return (
     <LanguageProvider>
-      <CartProvider>
-        <Switch>
-          {/* Admin Auth Route */}
-          <Route path="/admin/login" component={AdminLogin} />
-          
-          {/* Protected Admin Routes */}
-          <Route path="/admin">
-            <AdminProtectedRoute
-              path="/admin"
-              component={AdminDashboard}
-            />
-          </Route>
-          <Route path="/admin/products/new">
-            <AdminProtectedRoute
-              path="/admin/products/new"
-              component={ProductForm}
-            />
-          </Route>
-          <Route path="/admin/products/:id">
-            <AdminProtectedRoute
-              path="/admin/products/:id"
-              component={ProductForm}
-            />
-          </Route>
-          
-          {/* Public Routes - must be last to allow other routes to match first */}
-          <Route component={PublicRoutes} />
-        </Switch>
-        <Toaster />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <Switch>
+            {/* Auth Route */}
+            <Route path="/auth" component={AuthPage} />
+            
+            {/* Admin Auth Route */}
+            <Route path="/admin/login" component={AdminLogin} />
+            
+            {/* Protected Admin Routes */}
+            <Route path="/admin">
+              <AdminProtectedRoute
+                path="/admin"
+                component={AdminDashboard}
+              />
+            </Route>
+            <Route path="/admin/products/new">
+              <AdminProtectedRoute
+                path="/admin/products/new"
+                component={ProductForm}
+              />
+            </Route>
+            <Route path="/admin/products/:id">
+              <AdminProtectedRoute
+                path="/admin/products/:id"
+                component={ProductForm}
+              />
+            </Route>
+            
+            {/* Protected Routes */}
+            <ProtectedRoute path="/checkout" component={Checkout} />
+            
+            {/* Public Routes - must be last to allow other routes to match first */}
+            <Route component={PublicRoutes} />
+          </Switch>
+          <Toaster />
+        </CartProvider>
+      </AuthProvider>
     </LanguageProvider>
   );
 }

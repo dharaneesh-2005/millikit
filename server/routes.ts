@@ -1,24 +1,55 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCartItemSchema, insertContactSchema, insertProductSchema } from "@shared/schema";
+import { insertCartItemSchema, insertContactSchema, insertProductSchema, insertUserSchema } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { generateSecret, generateQrCode, verifyToken } from "./otpUtils";
+import { setupAuth } from "./auth";
+
+// Session storage for admin authentication
+interface AdminSession {
+  userId: number;
+  username: string;
+  isAdmin: boolean;
+  isAuthenticated: boolean;
+}
+
+const adminSessions = new Map<string, AdminSession>();
 
 // Admin middleware to check if the user has admin privileges
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  // For simplicity, we're using a header to indicate admin status
-  // In a real application, this would check for a logged-in user with admin role
-  const adminKey = req.headers["x-admin-key"];
+  const sessionId = req.headers["admin-session-id"] as string;
   
-  if (!adminKey || adminKey !== "admin-secret") {
-    return res.status(403).json({ message: "Unauthorized access" });
+  if (!sessionId || !adminSessions.has(sessionId)) {
+    return res.status(403).json({ 
+      success: false,
+      message: "Unauthorized access" 
+    });
   }
+  
+  const session = adminSessions.get(sessionId)!;
+  
+  if (!session.isAuthenticated || !session.isAdmin) {
+    return res.status(403).json({ 
+      success: false,
+      message: "Unauthorized access" 
+    });
+  }
+  
+  // Add the admin user data to the request
+  (req as any).adminUser = {
+    userId: session.userId,
+    username: session.username
+  };
   
   next();
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+  
   // Create HTTP server
   const httpServer = createServer(app);
 
@@ -228,6 +259,315 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Authentication Routes
+  
+  // Admin Login
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Username and password are required" 
+        });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Invalid username or password" 
+        });
+      }
+      
+      // In a real app, you would properly hash and compare passwords
+      // This is a simplified version for demonstration
+      if (user.password !== password) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Invalid username or password" 
+        });
+      }
+      
+      // Check if user has OTP enabled
+      if (user.otpEnabled) {
+        return res.status(200).json({
+          success: true,
+          otpRequired: true,
+          userId: user.id
+        });
+      }
+      
+      // Create session if no OTP required
+      const sessionId = nanoid();
+      const isUserAdmin = await storage.isAdmin(user.id);
+      
+      adminSessions.set(sessionId, {
+        userId: user.id,
+        username: user.username,
+        isAdmin: isUserAdmin,
+        isAuthenticated: true
+      });
+      
+      res.status(200).json({
+        success: true,
+        otpRequired: false,
+        sessionId,
+        userId: user.id,
+        username: user.username
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "An error occurred during login" 
+      });
+    }
+  });
+  
+  // Admin OTP Verification
+  app.post("/api/admin/verify-otp", async (req, res) => {
+    try {
+      const { userId, token } = req.body;
+      
+      if (!userId || !token) {
+        return res.status(400).json({ 
+          success: false,
+          message: "User ID and token are required" 
+        });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ 
+          success: false,
+          message: "User not found" 
+        });
+      }
+      
+      const isValid = await storage.verifyOtp(userId, token);
+      
+      if (!isValid) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Invalid OTP code" 
+        });
+      }
+      
+      // Create session if OTP is valid
+      const sessionId = nanoid();
+      const isUserAdmin = await storage.isAdmin(user.id);
+      
+      adminSessions.set(sessionId, {
+        userId: user.id,
+        username: user.username,
+        isAdmin: isUserAdmin,
+        isAuthenticated: true
+      });
+      
+      res.status(200).json({
+        success: true,
+        sessionId,
+        userId: user.id,
+        username: user.username
+      });
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "An error occurred during verification" 
+      });
+    }
+  });
+  
+  // Admin Registration
+  app.post("/api/admin/register", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Username and password are required" 
+        });
+      }
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      
+      if (existingUser) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Username already exists" 
+        });
+      }
+      
+      // Create new admin user
+      const user = await storage.createUser({
+        username,
+        password,
+        name: null,
+        email: null,
+        phone: null,
+        address: null
+      });
+      
+      res.status(201).json({
+        success: true,
+        userId: user.id,
+        username: user.username
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "An error occurred during registration" 
+      });
+    }
+  });
+  
+  // Admin OTP Setup
+  app.post("/api/admin/setup-otp", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ 
+          success: false,
+          message: "User ID is required" 
+        });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ 
+          success: false,
+          message: "User not found" 
+        });
+      }
+      
+      // Generate OTP secret for user
+      const secret = generateSecret(user.username);
+      
+      // Generate QR code for Google Authenticator
+      const qrCodeUrl = await generateQrCode(user.username, secret);
+      
+      res.status(200).json({
+        success: true,
+        secret,
+        qrCodeUrl
+      });
+    } catch (error) {
+      console.error('OTP setup error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "An error occurred during OTP setup" 
+      });
+    }
+  });
+  
+  // Admin OTP Verification after setup
+  app.post("/api/admin/verify-setup", async (req, res) => {
+    try {
+      const { userId, token, secret } = req.body;
+      
+      if (!userId || !token || !secret) {
+        return res.status(400).json({ 
+          success: false,
+          message: "User ID, token, and secret are required" 
+        });
+      }
+      
+      // Verify token manually since the secret isn't yet saved
+      const isValid = verifyToken(token, secret);
+      
+      if (!isValid) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Invalid OTP code" 
+        });
+      }
+      
+      // Enable OTP for the user and save the secret
+      const updatedUser = await storage.enableOtp(userId, secret);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ 
+          success: false,
+          message: "Failed to enable OTP for user" 
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        userId: updatedUser.id,
+        otpEnabled: true
+      });
+    } catch (error) {
+      console.error('Setup verification error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "An error occurred during verification" 
+      });
+    }
+  });
+  
+  // Admin Logout
+  app.post("/api/admin/logout", async (req, res) => {
+    try {
+      const sessionId = req.headers["admin-session-id"] as string;
+      
+      if (sessionId && adminSessions.has(sessionId)) {
+        adminSessions.delete(sessionId);
+      }
+      
+      res.status(200).json({
+        success: true,
+        message: "Logged out successfully"
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "An error occurred during logout" 
+      });
+    }
+  });
+  
+  // Admin Session Check
+  app.get("/api/admin/session", async (req, res) => {
+    try {
+      const sessionId = req.headers["admin-session-id"] as string;
+      
+      if (!sessionId || !adminSessions.has(sessionId)) {
+        return res.status(401).json({ 
+          success: false,
+          authenticated: false 
+        });
+      }
+      
+      const session = adminSessions.get(sessionId)!;
+      
+      res.status(200).json({
+        success: true,
+        authenticated: session.isAuthenticated,
+        isAdmin: session.isAdmin,
+        userId: session.userId,
+        username: session.username
+      });
+    } catch (error) {
+      console.error('Session check error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "An error occurred during session check" 
+      });
+    }
+  });
+  
   // Admin Routes
   
   // Admin Product Management
