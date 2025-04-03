@@ -1,10 +1,44 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import cookieParser from "cookie-parser";
 
+// Create Express app
 const app = express();
+
+// Security middleware
+app.disable("x-powered-by"); // Hide Express info
+app.set("trust proxy", 1);    // Trust first proxy
+
+// Add secure HTTP headers
+app.use((req, res, next) => {
+  // Set strict Content Security Policy
+  res.setHeader(
+    "Content-Security-Policy", 
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.pexels.com https://i.pravatar.cc; font-src 'self'"
+  );
+  
+  // Prevent clickjacking
+  res.setHeader("X-Frame-Options", "DENY");
+  
+  // XSS Protection
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  
+  // Prevent MIME type sniffing
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  
+  // Referrer Policy
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  
+  next();
+});
+
+// Parse JSON and URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Parse cookies
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   const start = Date.now();
