@@ -18,33 +18,9 @@ interface AdminSession {
 const adminSessions = new Map<string, AdminSession>();
 
 // Admin middleware to check if the user has admin privileges
-// Enhanced with additional security checks
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  // Get session ID from headers
   const sessionId = req.headers["admin-session-id"] as string;
   
-  // Check Origin/Referer headers to prevent CSRF attacks
-  const origin = req.headers.origin || "";
-  const referer = req.headers.referer || "";
-  const host = req.headers.host || "";
-  
-  // Basic CSRF protection - validate origin or referer contains the host
-  // Note: In production, this should be replaced with proper CSRF tokens
-  const isValidOrigin = !origin || origin.includes(host) || origin === "null";
-  const isValidReferer = !referer || referer.includes(host);
-  
-  if (!isValidOrigin && !isValidReferer) {
-    console.warn("CSRF attempt detected:", { origin, referer, host });
-    return res.status(403).json({ 
-      success: false,
-      message: "Access denied: Invalid request origin" 
-    });
-  }
-  
-  // Check rate limiting (could be further enhanced with a proper rate limiter package)
-  // This is a simple implementation - in production use a proper rate limiting middleware
-  
-  // Validate session
   if (!sessionId || !adminSessions.has(sessionId)) {
     return res.status(403).json({ 
       success: false,
@@ -54,16 +30,12 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   
   const session = adminSessions.get(sessionId)!;
   
-  // Check session validity and admin status
   if (!session.isAuthenticated || !session.isAdmin) {
     return res.status(403).json({ 
       success: false,
       message: "Unauthorized access" 
     });
   }
-  
-  // Validate the requesting IP matches the session's last IP (not implemented here)
-  // This would prevent session hijacking
   
   // Add the admin user data to the request
   (req as any).adminUser = {
@@ -291,40 +263,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin Authentication Routes
   
-  // Admin Login - Only allows the predefined admin user with enhanced security
+  // Admin Login - Only allows the predefined admin user (simplified without OTP)
   app.post("/api/admin/login", async (req, res) => {
     try {
-      // Get client IP for rate limiting
-      const clientIP = req.ip || req.socket.remoteAddress || 'unknown';
-      
-      // Simple static login attempt tracker for rate limiting
-      // In production, use a proper rate limiting library
-      const loginAttemptsMap = new Map<string, { count: number, lastAttempt: number }>();
-      const MAX_LOGIN_ATTEMPTS = 5;
-      const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
-      
-      // Check if IP is currently locked out due to too many failed attempts
-      const ipAttempts = loginAttemptsMap.get(clientIP);
-      if (ipAttempts) {
-        const timeSinceLastAttempt = Date.now() - ipAttempts.lastAttempt;
-        
-        if (ipAttempts.count >= MAX_LOGIN_ATTEMPTS && timeSinceLastAttempt < LOCKOUT_TIME) {
-          console.warn(`Blocked login attempt from locked out IP: ${clientIP}`);
-          return res.status(429).json({
-            success: false,
-            message: "Too many failed login attempts. Please try again later."
-          });
-        }
-        
-        // Reset count if lockout period has passed
-        if (timeSinceLastAttempt >= LOCKOUT_TIME) {
-          loginAttemptsMap.set(clientIP, { count: 0, lastAttempt: Date.now() });
-        }
-      }
-      
       const { username, password } = req.body;
       
-      // Validate required fields
       if (!username || !password) {
         return res.status(400).json({ 
           success: false,
@@ -332,57 +275,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Only allow the admin user to log in - hardcoded ID check
+      // Only allow the admin user to log in
       const user = await storage.getUserByUsername(username);
       
       if (!user || user.id !== 1) {
-        // Track failed attempt for this IP
-        if (!loginAttemptsMap.has(clientIP)) {
-          loginAttemptsMap.set(clientIP, { count: 1, lastAttempt: Date.now() });
-        } else {
-          const currentAttempts = loginAttemptsMap.get(clientIP)!;
-          loginAttemptsMap.set(clientIP, { 
-            count: currentAttempts.count + 1, 
-            lastAttempt: Date.now() 
-          });
-        }
-        
-        // Use the same error message and status code regardless of whether the username or password is wrong
-        // This prevents username enumeration attacks
         return res.status(401).json({ 
           success: false,
           message: "Invalid username or password" 
         });
       }
       
-      // Validate password with constant-time comparison to prevent timing attacks
-      // For demo purposes we're doing a simple comparison, but in production use a proper constant-time comparison
+      // In a real app, you would properly hash and compare passwords
+      // This is a simplified version for demonstration
       if (user.password !== password) {
-        // Track failed attempt
-        if (!loginAttemptsMap.has(clientIP)) {
-          loginAttemptsMap.set(clientIP, { count: 1, lastAttempt: Date.now() });
-        } else {
-          const currentAttempts = loginAttemptsMap.get(clientIP)!;
-          loginAttemptsMap.set(clientIP, { 
-            count: currentAttempts.count + 1, 
-            lastAttempt: Date.now() 
-          });
-        }
-        
         return res.status(401).json({ 
           success: false,
           message: "Invalid username or password" 
         });
       }
       
-      // Reset failed attempts on successful login
-      loginAttemptsMap.delete(clientIP);
-      
-      // Create session with secure ID
-      const sessionId = nanoid(32); // Use a longer, more secure session ID
+      // Create session directly without OTP
+      const sessionId = nanoid();
       const isUserAdmin = await storage.isAdmin(user.id);
       
-      // Store additional security information with the session
       adminSessions.set(sessionId, {
         userId: user.id,
         username: user.username,
@@ -390,18 +305,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAuthenticated: true
       });
       
-      // Set HTTP-only cookie with session ID for extra security
-      // In a production environment, also set 'secure: true' for HTTPS connections
-      res.cookie('adminSessionId', sessionId, { 
-        httpOnly: true,          // Prevents JavaScript access
-        sameSite: 'strict',      // Prevents CSRF
-        maxAge: 3600000,         // 1 hour in milliseconds
-        path: '/admin'           // Only sent to admin paths
-      });
-      
       res.status(200).json({
         success: true,
-        sessionId,               // Still include in response for client storage
+        sessionId,
         userId: user.id,
         username: user.username
       });
@@ -629,37 +535,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Admin Session Check with enhanced security
+  // Admin Session Check
   app.get("/api/admin/session", async (req, res) => {
     try {
-      // Check for session ID in both headers and cookies
-      let sessionId = req.headers["admin-session-id"] as string;
-      const cookieSessionId = req.cookies?.adminSessionId;
+      const sessionId = req.headers["admin-session-id"] as string;
       
-      // Use cookie session ID as fallback
-      if (!sessionId && cookieSessionId) {
-        sessionId = cookieSessionId;
-      }
-      
-      // Security check for origin/referer to prevent CSRF
-      const origin = req.headers.origin || "";
-      const referer = req.headers.referer || "";
-      const host = req.headers.host || "";
-      
-      const isValidOrigin = !origin || origin.includes(host) || origin === "null";
-      const isValidReferer = !referer || referer.includes(host);
-      
-      // For session verification, check both origin and referer
-      if (!isValidOrigin && !isValidReferer) {
-        console.warn("Security check failed for session verification:", { origin, referer, host });
-        return res.status(403).json({ 
-          success: false,
-          authenticated: false,
-          message: "Security check failed" 
-        });
-      }
-      
-      // Validate session
       if (!sessionId || !adminSessions.has(sessionId)) {
         return res.status(401).json({ 
           success: false,
@@ -669,28 +549,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const session = adminSessions.get(sessionId)!;
       
-      // Check if session is expired (not implemented here)
-      // This would check against a session timestamp
-      
-      // Validate the session is authentic
-      if (!session.isAuthenticated) {
-        return res.status(401).json({ 
-          success: false,
-          authenticated: false 
-        });
-      }
-      
-      // Validate admin status - critical for security!
-      if (!session.isAdmin) {
-        return res.status(403).json({ 
-          success: false,
-          authenticated: true,
-          isAdmin: false,
-          message: "Access forbidden: Admin privileges required"
-        });
-      }
-      
-      // Only return minimal necessary information
       res.status(200).json({
         success: true,
         authenticated: session.isAuthenticated,
@@ -702,8 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Session check error:', error);
       res.status(500).json({ 
         success: false,
-        authenticated: false,
-        message: "An error occurred during session verification" 
+        message: "An error occurred during session check" 
       });
     }
   });
