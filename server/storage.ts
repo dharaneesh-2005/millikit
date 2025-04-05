@@ -563,12 +563,19 @@ export class MemStorage implements IStorage {
 // Otherwise, fall back to in-memory storage for development
 let storage: IStorage;
 
+// Initialize storage with default implementation
 if (process.env.DATABASE_URL) {
   console.log('Using PostgreSQL storage implementation with DATABASE_URL');
   storage = new PostgreSQLStorage(process.env.DATABASE_URL);
 } else {
   console.log('DATABASE_URL not found, using in-memory storage implementation');
   storage = new MemStorage();
+}
+
+// Function to set the storage implementation (useful for serverless environments)
+export function setStorage(newStorage: IStorage): void {
+  storage = newStorage;
+  console.log('Storage implementation updated');
 }
 
 export { storage };

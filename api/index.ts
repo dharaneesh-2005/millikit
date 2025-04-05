@@ -1,60 +1,110 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import express from 'express';
-import { createServer } from 'http';
+import { VercelRequest, VercelResponse } from '@vercel/node';
+import express, { Express, Request, Response, NextFunction } from 'express';
+import { setupAuth } from '../server/auth';
 import { registerRoutes } from '../server/routes';
-import cookieParser from 'cookie-parser';
-import 'dotenv/config';
+import { Server } from 'http';
+import dotenv from 'dotenv';
+import cookie from 'cookie-parser';
+import session from 'express-session';
 import { initializeDatabase } from '../server/db';
+import { PostgreSQLStorage } from '../server/postgresql';
+import { setStorage } from '../server/storage';
 
-// Create Express app instance
+// Load environment variables
+dotenv.config();
+
+// Configure session store based on environment
+let sessionOptions: session.SessionOptions;
+const sessionSecret = process.env.SESSION_SECRET || 'millikit-secret';
+
+// Database connection
+let db: { client: any; db: any } | null = null;
+let storage: PostgreSQLStorage | null = null;
+
+// Create and configure Express app
 const app = express();
+
+// Common middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookie());
 
-// Setup logging middleware
-app.use((req, res, next) => {
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+// Initialize session middleware
+app.use(
+  session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    },
+  })
+);
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  next();
+// Global error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Global error handler caught:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err?.message || 'An unexpected error occurred',
+  });
 });
 
-// Initialize server and routes
-let serverInstance: any;
-
-// This is a handler for Vercel serverless functions
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!serverInstance) {
-    // Initialize the database if DATABASE_URL is available
-    if (process.env.DATABASE_URL) {
-      try {
-        console.log('Vercel serverless function: Initializing database');
-        await initializeDatabase(process.env.DATABASE_URL);
-        console.log('Vercel serverless function: Database initialized successfully');
-      } catch (error) {
-        console.error('Vercel serverless function: Error initializing database:', error);
+// Initialize database connection before handling requests
+const initializeServerComponents = async () => {
+  try {
+    // Initialize database if needed
+    if (!db || !storage) {
+      const databaseUrl = process.env.DATABASE_URL;
+      if (!databaseUrl) {
+        throw new Error('DATABASE_URL environment variable is required');
       }
-    } else {
-      console.log('Vercel serverless function: No DATABASE_URL found, skipping database initialization');
+
+      console.log('Initializing database connection...');
+      db = await initializeDatabase(databaseUrl);
+      
+      // Create the storage adapter
+      storage = new PostgreSQLStorage(databaseUrl);
+      setStorage(storage);
+      
+      // Setup authentication
+      setupAuth(app);
+      
+      // Register API routes
+      await registerRoutes(app);
+      
+      console.log('Server components initialized successfully');
     }
-    
-    // Only register routes once
-    const server = createServer(app);
-    await registerRoutes(app);
-    serverInstance = server;
+  } catch (error) {
+    console.error('Failed to initialize server components:', error);
+    throw error;
+  }
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Initialize server components if needed
+  try {
+    await initializeServerComponents();
+  } catch (error) {
+    console.error('Failed to initialize server in serverless function:', error);
+    // Continue and let the error handling middleware handle the error
   }
   
   // Forward the request to Express
-  return new Promise((resolve, reject) => {
-    app(req, res);
-    res.on('finish', resolve);
-    res.on('error', reject);
+  return new Promise<void>((resolve, reject) => {
+    try {
+      app(req, res);
+      res.on('finish', () => resolve());
+      res.on('error', reject);
+    } catch (error) {
+      console.error('Vercel serverless function: Error handling request:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          error: 'Internal Server Error',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+      resolve();
+    }
   });
 }

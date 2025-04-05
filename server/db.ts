@@ -3,10 +3,10 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import fs from 'fs';
 import path from 'path';
-import { users, products, cartItems, contacts } from '@shared/schema';
+import { users, products, cartItems, contacts, InsertProduct } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-// Mock product data to populate database with initial data
+// Import product data directly to avoid circular dependencies
 import { sampleProducts } from './sampleData';
 
 /**
@@ -88,12 +88,10 @@ export async function initializeDatabase(url: string) {
     
     if (adminUser.length === 0) {
       console.log('Creating admin user...');
-      await db.insert(users).values({
-        username: 'admin_millikit',
-        password: 'the_millikit', // In production, use a properly hashed password
-        name: 'Admin',
-        isAdmin: true,
-      });
+      await migrationDb.execute(`
+        INSERT INTO users (username, password, name, is_admin) 
+        VALUES ('admin_millikit', 'the_millikit', 'Admin', true)
+      `);
       console.log('Admin user created successfully');
     } else {
       console.log('Admin user already exists');
@@ -107,7 +105,39 @@ export async function initializeDatabase(url: string) {
       
       // Insert products in batches to avoid overwhelming the database
       for (const product of sampleProducts) {
-        await db.insert(products).values(product);
+        try {
+          // Use raw SQL to avoid schema validation issues with a single SQL string
+          const sql = `INSERT INTO products 
+            (name, slug, description, short_description, price, compare_price, badge, 
+            category, image_url, image_gallery, in_stock, stock_quantity, featured, 
+            nutrition_facts, cooking_instructions, rating, review_count, weight_options, reviews) 
+            VALUES 
+            ('${product.name}', 
+            '${product.slug}', 
+            '${product.description.replace(/'/g, "''")}', 
+            '${product.shortDescription?.replace(/'/g, "''")}', 
+            ${product.price}, 
+            ${product.comparePrice ? product.comparePrice : 'NULL'}, 
+            ${product.badge ? `'${product.badge}'` : 'NULL'}, 
+            '${product.category}', 
+            '${product.imageUrl}', 
+            ARRAY[${product.imageGallery.map((url: string) => `'${url}'`).join(', ')}], 
+            ${product.inStock}, 
+            ${product.stockQuantity}, 
+            ${product.featured}, 
+            ${product.nutritionFacts ? `'${product.nutritionFacts.replace(/'/g, "''")}'` : 'NULL'}, 
+            ${product.cookingInstructions ? `'${product.cookingInstructions.replace(/'/g, "''")}'` : 'NULL'}, 
+            ${product.rating}, 
+            ${product.reviewCount}, 
+            ARRAY[${product.weightOptions.map((opt: string) => `'${opt}'`).join(', ')}], 
+            '${product.reviews.replace(/'/g, "''")}'
+            )`;
+          
+          await migrationDb.execute(sql);
+        } catch (error) {
+          console.error(`Error inserting product ${product.name}:`, error);
+          // Continue with the next product even if this one fails
+        }
       }
       
       console.log(`Added ${sampleProducts.length} sample products`);

@@ -1,10 +1,23 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/" }
-  ],
-  "buildCommand": "npm run build",
+  "version": 2,
+  "buildCommand": "node vercel-build.js",
+  "installCommand": "npm install",
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
-  "framework": null
+  "builds": [
+    { "src": "api/index.ts", "use": "@vercel/node" },
+    { "src": "dist/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "src": "/(.*)", "dest": "/dist/$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/dist/index.html" }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "buildEnv": {
+    "ADMIN_KEY": "${ADMIN_KEY}"
+  }
 }

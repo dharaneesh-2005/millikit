@@ -39,8 +39,16 @@ export async function adminApiRequest(
     "Content-Type": "application/json"
   };
   
+  // Try session-based auth first
   if (sessionId) {
     headers["admin-session-id"] = sessionId;
+  }
+  
+  // Add admin key if available (for serverless environments like Vercel)
+  const adminKey = import.meta.env.VITE_ADMIN_KEY;
+  if (adminKey) {
+    headers["x-admin-key"] = adminKey;
+    console.log("Added admin key to request");
   }
   
   const res = await fetch(url, {
@@ -74,6 +82,7 @@ export const getQueryFn: <T>(options: {
 
 /**
  * Query function for admin endpoints that need to include the session ID
+ * Also supports admin key authentication for serverless environments
  */
 export const getAdminQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
@@ -91,16 +100,25 @@ export const getAdminQueryFn: <T>(options: {
     });
     
     // If we don't have a session ID and we're not authenticated, return null early
-    if (!sessionId && !isAdminAuth && unauthorizedBehavior === "returnNull") {
-      console.log("No admin session found, returning null");
+    // But only if we also don't have an admin key available
+    const adminKey = import.meta.env.VITE_ADMIN_KEY;
+    if (!sessionId && !isAdminAuth && !adminKey && unauthorizedBehavior === "returnNull") {
+      console.log("No admin authentication found, returning null");
       return null;
     }
     
     // Prepare headers with session ID if available
     const headers: Record<string, string> = {};
     
+    // Try session-based auth first
     if (sessionId) {
       headers["admin-session-id"] = sessionId;
+    }
+    
+    // Add admin key if available (for serverless environments like Vercel)
+    if (adminKey) {
+      headers["x-admin-key"] = adminKey;
+      console.log("Added admin key to query request");
     }
     
     try {
