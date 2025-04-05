@@ -15,9 +15,7 @@
     { "src": "/(.*)", "dest": "/dist/index.html" }
   ],
   "env": {
-    "NODE_ENV": "production"
-  },
-  "buildEnv": {
+    "NODE_ENV": "production",
     "ADMIN_KEY": "${ADMIN_KEY}"
   }
 }

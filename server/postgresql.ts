@@ -57,22 +57,40 @@ export class PostgreSQLStorage implements IStorage {
     try {
       return await operation();
     } catch (error) {
-      if (
-        error instanceof Error && 
-        (
-          // Check for connection termination errors
-          error.message.includes('terminating connection') ||
-          error.message.includes('Connection terminated') ||
-          error.message.includes('Connection closed')
-        ) && 
-        retries > 0
-      ) {
+      // Check for common database connection errors
+      const isConnectionError = error instanceof Error && (
+        // PostgreSQL specific connection errors
+        error.message.includes('terminating connection') ||
+        error.message.includes('Connection terminated') ||
+        error.message.includes('Connection closed') ||
+        error.message.includes('connection lost') ||
+        error.message.includes('could not connect') ||
+        error.message.includes('timeout') ||
+        // Serverless environment specific errors
+        error.message.includes('socket hang up') ||
+        error.message.includes('ECONNREFUSED') ||
+        error.message.includes('ETIMEDOUT') ||
+        error.message.includes('ENOTFOUND')
+      );
+      
+      if (isConnectionError && retries > 0) {
         console.log(`Database connection lost. Reconnecting... (${retries} retries left)`);
         
-        // Wait before attempting to reconnect
-        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+        // Exponential backoff: increase delay with each retry
+        const currentDelay = this.retryDelay * (this.maxRetries - retries + 1);
+        await new Promise(resolve => setTimeout(resolve, currentDelay));
         
         try {
+          // Close existing connection if possible
+          try {
+            if (this.client && typeof this.client.end === 'function') {
+              await this.client.end({ timeout: 5 }).catch(e => console.log('Error closing previous connection:', e.message));
+            }
+          } catch (endError) {
+            console.log('Error while attempting to close previous connection:', endError);
+            // Continue even if closing fails
+          }
+          
           // Reinitialize the connection
           this.initConnection();
           console.log('Successfully reconnected to database');
@@ -81,7 +99,14 @@ export class PostgreSQLStorage implements IStorage {
           return this.executeWithRetry(operation, retries - 1);
         } catch (reconnectError) {
           console.error('Failed to reconnect to database:', reconnectError);
-          throw error; // Throw the original error if reconnection fails
+          
+          if (retries > 1) {
+            console.log('Will try again after delay...');
+            await new Promise(resolve => setTimeout(resolve, currentDelay * 2));
+            return this.executeWithRetry(operation, retries - 1);
+          }
+          
+          throw error; // Throw the original error if all reconnection attempts fail
         }
       }
       

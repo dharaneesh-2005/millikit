@@ -24,7 +24,7 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   // For simplified admin access in serverless environments, allow x-admin-key
   const adminKey = req.headers["x-admin-key"] as string;
   // Get admin secret from environment variable or use fallback for local development
-  const adminSecret = process.env.ADMIN_SECRET || "admin-secret";
+  const adminSecret = process.env.ADMIN_KEY || process.env.ADMIN_SECRET || "admin-secret";
   
   if (adminKey === adminSecret) {
     console.log("Admin auth successful via admin-key");

@@ -6,8 +6,75 @@ import path from 'path';
 import { users, products, cartItems, contacts, InsertProduct } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-// Import product data directly to avoid circular dependencies
-import { sampleProducts } from './sampleData';
+// Sample product data defined directly here to avoid importing from a separate file
+const sampleProducts: InsertProduct[] = [
+  {
+    name: "Organic Foxtail Millet",
+    slug: "organic-foxtail-millet",
+    description: "Foxtail millet is one of the oldest cultivated millets, known for its high nutritional value.",
+    shortDescription: "Nutrient-rich ancient grain, perfect for healthy meals.",
+    price: "150.00", 
+    comparePrice: "180.00",
+    badge: "Organic",
+    category: "Grains",
+    imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e8c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80",
+    imageGallery: [
+      "https://images.unsplash.com/photo-1586201375761-83865001e8c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
+    ],
+    inStock: true,
+    stockQuantity: 50,
+    featured: true,
+    nutritionFacts: "Serving Size: 100g, Calories: 364, Protein: 11.5g, Fat: 4g, Carbohydrates: 72g",
+    cookingInstructions: "Rinse thoroughly before cooking. Use 1 part millet to 2.5 parts water.",
+    rating: "4.8",
+    reviewCount: 24,
+    weightOptions: ["500g", "1kg", "2kg"],
+    reviews: JSON.stringify([
+      {
+        id: "1", 
+        name: "Ananya Sharma", 
+        avatar: "https://randomuser.me/api/portraits/women/17.jpg", 
+        date: "2023-06-15", 
+        rating: 5, 
+        comment: "This foxtail millet is amazing! I made a delicious pulao with it and my family loved it.",
+        helpfulCount: 8
+      }
+    ])
+  },
+  {
+    name: "Barnyard Millet Flour",
+    slug: "barnyard-millet-flour",
+    description: "Our stone-ground barnyard millet flour is a perfect gluten-free alternative for your baking needs.",
+    shortDescription: "Gluten-free flour with high fiber content.",
+    price: "180.00",
+    comparePrice: "200.00",
+    badge: "Gluten-Free",
+    category: "Flour",
+    imageUrl: "https://images.unsplash.com/photo-1586201375800-744e8cf7cdea?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80",
+    imageGallery: [
+      "https://images.unsplash.com/photo-1586201375800-744e8cf7cdea?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
+    ],
+    inStock: true,
+    stockQuantity: 30,
+    featured: true,
+    nutritionFacts: "Serving Size: 100g, Calories: 342, Protein: 10.8g, Fat: 3.9g, Carbohydrates: 65.5g",
+    cookingInstructions: "Can replace regular flour in most recipes. For bread and baked goods, best results when mixed with other flours.",
+    rating: "4.6",
+    reviewCount: 18,
+    weightOptions: ["500g", "1kg"],
+    reviews: JSON.stringify([
+      {
+        id: "1", 
+        name: "Priya Patel", 
+        avatar: "https://randomuser.me/api/portraits/women/44.jpg", 
+        date: "2023-06-02", 
+        rating: 5, 
+        comment: "I've been looking for gluten-free alternatives for my daughter, and this flour is perfect!",
+        helpfulCount: 7
+      }
+    ])
+  }
+];
 
 /**
  * Initialize the database connection and run migrations
