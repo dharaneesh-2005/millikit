@@ -92,4 +92,4 @@ If you encounter issues:
 
 ## Support
 
-If you need additional assistance with deployment, please contact our support team or refer to Vercel's documentation at [vercel.com/docs](https://vercel.com/docs).
+If you need additional assistance with deployment, please refer to Vercel's documentation at [vercel.com/docs](https://vercel.com/docs).

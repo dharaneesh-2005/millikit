@@ -1,19 +1,19 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "outputDirectory": "dist",
   "builds": [
-    { "src": "api/index.ts", "use": "@vercel/node" },
-    { "src": "dist/**", "use": "@vercel/static" }
+    {
+      "src": "pages/**/*.js",
+      "use": "@vercel/next"
+    }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.ts" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/dist/index.html" }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "ADMIN_KEY": "${ADMIN_KEY}"
-  }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
 }

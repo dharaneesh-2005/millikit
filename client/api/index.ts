@@ -1,136 +1,154 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express, { Express, Request, Response, NextFunction } from 'express';
-import { setupAuth } from '../../server/auth';
 import { registerRoutes } from '../../server/routes';
-import { Server } from 'http';
-import dotenv from 'dotenv';
-import cookie from 'cookie-parser';
-import session from 'express-session';
 import { initializeDatabase } from '../../server/db';
+import { IStorage } from '../../server/storage';
 import { PostgreSQLStorage } from '../../server/postgresql';
 import { setStorage } from '../../server/storage';
+import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
-// Configure session store based on environment
-let sessionOptions: session.SessionOptions;
-const sessionSecret = process.env.SESSION_SECRET || 'millikit-secret';
+// Import session-related modules
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
+import { setupAuth } from '../../server/auth';
 
-// Database connection
-let db: { client: any; db: any } | null = null;
-let storage: PostgreSQLStorage | null = null;
+// When running locally, the DATABASE_URL usually includes these. When in Vercel, we use the separate env variables
+const sslMode = process.env.NODE_ENV === 'production' ? '?sslmode=require' : '';
+const pgHost = process.env.PGHOST;
+const pgPort = process.env.PGPORT;
+const pgUser = process.env.PGUSER;
+const pgPassword = process.env.PGPASSWORD;
+const pgDatabase = process.env.PGDATABASE;
 
-// Create and configure Express app
-const app = express();
+// Build connection string from environment variables
+let databaseUrl = process.env.DATABASE_URL || '';
 
-// Common middleware
-app.use(express.json());
-app.use(cookie());
+// If we have individual PostgreSQL environment variables, use those to construct a connection string
+if (pgHost && pgPort && pgUser && pgPassword && pgDatabase) {
+  databaseUrl = `postgres://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}${sslMode}`;
+}
 
-// Initialize session middleware
-app.use(
-  session({
-    secret: sessionSecret,
+// Singleton instance for serverless environment
+let app: Express | null = null;
+let storage: IStorage | null = null;
+let isInitialized = false;
+
+// Initialize application and database only once per instance
+const initializeServer = async () => {
+  // Skip if already initialized
+  if (isInitialized && app && storage) {
+    return { app, storage };
+  }
+
+  console.log('Initializing server in Vercel environment...');
+  
+  // Create Express app
+  app = express();
+  
+  // Use JSON middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
+  
+  // Set up session
+  const sessionConfig = {
+    secret: process.env.SESSION_SECRET || 'millikit-session-secret',
     resave: false,
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
     },
-  })
-);
-
-// Global error handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Global error handler caught:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: err?.message || 'An unexpected error occurred',
+  };
+  
+  app.use(session(sessionConfig));
+  
+  // Handle errors
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('API Error:', err);
+    res.status(500).json({
+      error: 'Server error',
+      message: err.message || 'An unexpected error occurred',
+    });
   });
-});
-
-// Initialize database connection before handling requests
-const initializeServerComponents = async () => {
-  try {
-    // Initialize database if needed
-    if (!db || !storage) {
-      const databaseUrl = process.env.DATABASE_URL;
-      if (!databaseUrl) {
-        throw new Error('DATABASE_URL environment variable is required');
-      }
-
-      console.log('Initializing database connection...');
-      db = await initializeDatabase(databaseUrl);
-      
-      // Create the storage adapter
-      storage = new PostgreSQLStorage(databaseUrl);
-      setStorage(storage);
-      
-      // Setup authentication
-      setupAuth(app);
-      
-      // Register API routes
-      await registerRoutes(app);
-      
-      console.log('Server components initialized successfully');
-    }
-  } catch (error) {
-    console.error('Failed to initialize server components:', error);
-    throw error;
+  
+  // Initialize database
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL or PostgreSQL environment variables are required');
   }
+  
+  console.log('Connecting to database...');
+  const dbClient = await initializeDatabase(databaseUrl);
+  
+  // Create and set storage
+  storage = new PostgreSQLStorage(databaseUrl);
+  setStorage(storage);
+  
+  // Set up authentication
+  setupAuth(app);
+  
+  // Register routes
+  await registerRoutes(app);
+  
+  isInitialized = true;
+  console.log('Server initialization complete');
+  
+  return { app, storage };
 };
 
+// Vercel serverless handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Initialize server components if needed
   try {
-    await initializeServerComponents();
-  } catch (error) {
-    console.error('Failed to initialize server in serverless function:', error);
-    
-    // Return clear error for database connection issues
-    return res.status(500).json({ 
-      error: 'Database Connection Error',
-      message: 'Could not connect to the database. Make sure DATABASE_URL environment variable is set correctly.',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-  
-  // Add health check endpoint for easier debugging
-  if (req.url === '/api/health') {
-    return res.status(200).json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      dbInitialized: !!db,
-      dbConnected: !!storage,
-      env: {
-        nodeEnv: process.env.NODE_ENV,
-        hasDbUrl: !!process.env.DATABASE_URL,
-        hasPgHost: !!process.env.PGHOST,
-        hasPgUser: !!process.env.PGUSER,
-        hasPgPassword: !!process.env.PGPASSWORD,
-        hasPgDatabase: !!process.env.PGDATABASE,
-        hasPgPort: !!process.env.PGPORT,
-        hasAdminKey: !!process.env.ADMIN_KEY
-      }
-    });
-  }
-  
-  // Forward the request to Express
-  return new Promise<void>((resolve, reject) => {
-    try {
-      app(req, res);
-      res.on('finish', () => resolve());
-      res.on('error', reject);
-    } catch (error) {
-      console.error('Vercel serverless function: Error handling request:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ 
-          error: 'Internal Server Error',
-          message: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
-      resolve();
+    // Add health check that doesn't require full initialization
+    if (req.url === '/api/health') {
+      return res.status(200).json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        initialized: isInitialized,
+        env: {
+          nodeEnv: process.env.NODE_ENV,
+          hasDbUrl: !!process.env.DATABASE_URL,
+          hasPgHost: !!process.env.PGHOST,
+          hasPgUser: !!process.env.PGUSER,
+          hasPgPassword: !!process.env.PGPASSWORD,
+          hasPgDatabase: !!process.env.PGDATABASE,
+          hasPgPort: !!process.env.PGPORT,
+          hasAdminKey: !!process.env.ADMIN_KEY
+        },
+        dbUrl: databaseUrl ? databaseUrl.replace(/:[^:]*@/, ':[PASSWORD]@') : 'Not configured'
+      });
     }
-  });
+    
+    // Initialize the server components
+    const { app } = await initializeServer();
+
+    // Create a middleware chain compatible with both Express and Vercel
+    // This avoids type mismatches between Vercel and Express request/response objects
+    const handleWithExpress = (req: VercelRequest, res: VercelResponse): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        // Express can handle the Vercel request/response objects despite the TypeScript warning
+        // We need to cast here to satisfy TypeScript
+        app!(req as any, res as any, (err: any) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve();
+        });
+      });
+    };
+    
+    // Handle the request
+    await handleWithExpress(req, res);
+    return;
+    
+  } catch (error) {
+    console.error('Error in serverless handler:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error instanceof Error ? error.message : 'An unexpected error occurred'
+    });
+  }
 }
