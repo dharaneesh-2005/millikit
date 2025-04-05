@@ -637,8 +637,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/products", isAdmin, async (req, res) => {
     try {
       console.log("Creating product with data:", req.body);
-      const productData = insertProductSchema.parse(req.body);
+      
+      // Pre-process the numeric fields to handle empty strings
+      const dataWithDefaultsApplied = { ...req.body };
+      
+      // Handle empty strings in numeric fields by setting to null or appropriate defaults
+      if (dataWithDefaultsApplied.rating === "") dataWithDefaultsApplied.rating = null;
+      if (dataWithDefaultsApplied.comparePrice === "") dataWithDefaultsApplied.comparePrice = null;
+      
+      // Parse the data with the schema
+      const productData = insertProductSchema.parse(dataWithDefaultsApplied);
       console.log("Parsed product data:", productData);
+      
       const product = await storage.createProduct(productData);
       console.log("Product created successfully:", product);
       res.status(201).json(product);
@@ -667,13 +677,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      const updatedProduct = await storage.updateProduct(id, req.body);
+      // Pre-process the numeric fields to handle empty strings
+      const dataWithDefaultsApplied = { ...req.body };
+      
+      // Handle empty strings in numeric fields by setting to null or appropriate defaults
+      if (dataWithDefaultsApplied.rating === "") dataWithDefaultsApplied.rating = null;
+      if (dataWithDefaultsApplied.comparePrice === "") dataWithDefaultsApplied.comparePrice = null;
+      
+      const updatedProduct = await storage.updateProduct(id, dataWithDefaultsApplied);
       res.json(updatedProduct);
     } catch (error) {
+      console.error("Error updating product:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }
-      res.status(500).json({ message: "Error updating product" });
+      // Return more detailed error message
+      res.status(500).json({ 
+        message: "Error updating product", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 
