@@ -2,91 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+/* Basic styling */
+body {
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f9fafb;
+  color: #111827;
+}
 
-  body {
-    @apply font-sans antialiased bg-background text-foreground;
-    font-family: 'Poppins', sans-serif;
-  }
+/* Simple utility classes */
+.text-shadow {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
 
-  .hero-gradient {
-    background: linear-gradient(135deg, #ffd700 0%, #90EE90 100%);
-  }
+.product-image {
+  transition: transform 0.3s ease-in-out;
+}
 
-  .contact-hero-gradient {
-    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-  }
+.product-image-gallery img {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 
-  .text-shadow {
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-  }
+.product-image-gallery img:hover {
+  border-color: #16a34a;
+}
 
-  @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-    100% { transform: translateY(0px); }
-  }
+.language-selector {
+  position: fixed;
+  top: 20px;
+  right: 100px;
+  z-index: 1000;
+}
 
-  .float-animation {
-    animation: float 3s ease-in-out infinite;
-  }
+.star-rating {
+  display: inline-flex;
+  font-size: 1.25rem;
+  color: #eab308;
+}
 
-  .product-card:hover .product-image {
-    transform: scale(1.05);
-  }
+.tab-content {
+  display: none;
+}
 
-  .product-image {
-    transition: transform 0.3s ease-in-out;
-  }
+.tab-content.active {
+  display: block;
+}
 
-  .product-image-gallery img {
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .product-image-gallery img:hover {
-    border-color: #16a34a;
-    transform: scale(1.05);
-  }
-
-  .language-selector {
-    position: fixed;
-    top: 20px;
-    right: 100px;
-    z-index: 1000;
-  }
-
-  .form-input:focus {
-    border-color: #16a34a;
-    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.1);
-  }
-
-  .star-rating {
-    display: inline-flex;
-    font-size: 1.25rem;
-    color: #eab308;
-  }
-
-  .tab-content {
-    display: none;
-  }
-
-  .tab-content.active {
-    display: block;
-    animation: fadeIn 0.5s ease-in-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .grid-view {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2rem;
-  }
+.grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
 }
