@@ -173,6 +173,11 @@ export async function initializeDatabase(url: string) {
       // Insert products in batches to avoid overwhelming the database
       for (const product of sampleProducts) {
         try {
+          // Use parameterized queries with proper TypeScript null checking
+          const imageGalleryArray = product.imageGallery || [];
+          const weightOptionsArray = product.weightOptions || [];
+          const reviewsStr = product.reviews || null;
+          
           // Use raw SQL to avoid schema validation issues with a single SQL string
           const sql = `INSERT INTO products 
             (name, slug, description, short_description, price, compare_price, badge, 
@@ -188,7 +193,7 @@ export async function initializeDatabase(url: string) {
             ${product.badge ? `'${product.badge}'` : 'NULL'}, 
             '${product.category}', 
             '${product.imageUrl}', 
-            ARRAY[${product.imageGallery.map((url: string) => `'${url}'`).join(', ')}], 
+            ARRAY[${imageGalleryArray.map((url: string) => `'${url}'`).join(', ')}], 
             ${product.inStock}, 
             ${product.stockQuantity}, 
             ${product.featured}, 
@@ -196,8 +201,8 @@ export async function initializeDatabase(url: string) {
             ${product.cookingInstructions ? `'${product.cookingInstructions.replace(/'/g, "''")}'` : 'NULL'}, 
             ${product.rating}, 
             ${product.reviewCount}, 
-            ARRAY[${product.weightOptions.map((opt: string) => `'${opt}'`).join(', ')}], 
-            '${product.reviews.replace(/'/g, "''")}'
+            ARRAY[${weightOptionsArray.map((opt: string) => `'${opt}'`).join(', ')}], 
+            ${reviewsStr ? `'${reviewsStr.replace(/'/g, "''")}'` : 'NULL'}
             )`;
           
           await migrationDb.execute(sql);

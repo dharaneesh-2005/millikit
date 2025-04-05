@@ -595,6 +595,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Session Check
   app.get("/api/admin/session", async (req, res) => {
     try {
+      // Check for admin key first (for serverless environments)
+      const adminKey = req.headers["x-admin-key"] as string;
+      const adminSecret = process.env.ADMIN_KEY || process.env.ADMIN_SECRET || "admin-secret";
+      
+      // If admin key is provided and matches, return admin session info
+      if (adminKey === adminSecret) {
+        console.log("Admin auth successful via admin-key in session check");
+        return res.status(200).json({
+          success: true,
+          authenticated: true,
+          isAdmin: true,
+          userId: 1, // Default admin user ID
+          username: "admin_millikit",
+          authMethod: "key"
+        });
+      }
+      
       // Check for admin session ID in headers, authorization header, or cookies
       const sessionId = (
         req.headers["admin-session-id"] as string || 
@@ -620,7 +637,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authenticated: session.isAuthenticated,
         isAdmin: session.isAdmin,
         userId: session.userId,
-        username: session.username
+        username: session.username,
+        authMethod: "session"
       });
     } catch (error) {
       console.error('Session check error:', error);

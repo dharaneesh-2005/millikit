@@ -87,7 +87,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await initializeServerComponents();
   } catch (error) {
     console.error('Failed to initialize server in serverless function:', error);
-    // Continue and let the error handling middleware handle the error
+    
+    // Return clear error for database connection issues
+    return res.status(500).json({ 
+      error: 'Database Connection Error',
+      message: 'Could not connect to the database. Make sure DATABASE_URL environment variable is set correctly.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+  
+  // Add health check endpoint for easier debugging
+  if (req.url === '/api/health') {
+    return res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      dbInitialized: !!db,
+      dbConnected: !!storage,
+      env: {
+        nodeEnv: process.env.NODE_ENV,
+        hasDbUrl: !!process.env.DATABASE_URL,
+        hasPgHost: !!process.env.PGHOST,
+        hasPgUser: !!process.env.PGUSER,
+        hasPgPassword: !!process.env.PGPASSWORD,
+        hasPgDatabase: !!process.env.PGDATABASE,
+        hasPgPort: !!process.env.PGPORT,
+        hasAdminKey: !!process.env.ADMIN_KEY
+      }
+    });
   }
   
   // Forward the request to Express
