@@ -1,26 +1,30 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "client/api/index.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "client/pages/**/*.js",
-      "use": "@vercel/next"
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/.next",
+  "framework": "nextjs",
+  "rewrites": [
+    { 
+      "source": "/api/:path*", 
+      "destination": "/api/:path*"
     }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/api/(.*)",
-      "dest": "client/api/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "client/pages/$1"
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }

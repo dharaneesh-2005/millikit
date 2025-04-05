@@ -75,19 +75,25 @@ After deployment:
 
 If you encounter issues:
 
-1. **Database Connection Errors**: 
+1. **"Specified 'src' for '@vercel/next' has to be 'package.json' or 'next.config.js'" Error**:
+   - This error occurs when Vercel can't find a proper Next.js configuration at the source path
+   - **Solution**: Make sure you've set the `client` directory as the root directory in your Vercel project settings
+   - If deploying from the CLI, use the `--cwd ./client` flag
+   - Check that your `client/vercel.json` file correctly specifies the `next.config.js` as the source for the Next.js builder
+
+2. **Database Connection Errors**: 
    - Verify that your database credentials are correct
    - Make sure your database allows connections from Vercel's IP range
    - For Neon, enable the "Pooled connection" option
 
-2. **API Routes Not Working**:
+3. **API Routes Not Working**:
    - Check the Vercel Function Logs in your Vercel dashboard
    - Verify that `/api/*` routes are being handled correctly
 
-3. **Static Content Issues**:
+4. **Static Content Issues**:
    - Make sure your static assets are properly referenced
 
-4. **Performance Issues**:
+5. **Performance Issues**:
    - Consider enabling Vercel's Edge Functions for better global performance
 
 ## Support

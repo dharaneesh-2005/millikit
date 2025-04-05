@@ -2,15 +2,21 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  distDir: '.next',
+  poweredByHeader: false,
+  
   // Add a rewrite rule to handle API requests
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: '/api/:path*',
+        destination: process.env.NODE_ENV === 'development'
+          ? 'http://localhost:3000/api/:path*'
+          : '/api/:path*',
       },
     ];
   },
+  
   // Configure public asset directory
   publicRuntimeConfig: {
     staticFolder: '/public',
