@@ -47,6 +47,7 @@ export default function ReviewManager({ reviews, onChange }: ReviewManagerProps)
   const handleDeleteReview = (index: number) => {
     const updatedReviews = [...reviews];
     updatedReviews.splice(index, 1);
+    // Pass updated reviews to parent component to sync review count
     onChange(updatedReviews);
   };
   
@@ -62,6 +63,7 @@ export default function ReviewManager({ reviews, onChange }: ReviewManagerProps)
       updatedReviews.push(editingReview);
     }
     
+    // Pass updated reviews to parent component
     onChange(updatedReviews);
     setEditingReview(null);
     setEditIndex(-1);

@@ -251,6 +251,22 @@ export default function ProductForm() {
         const slug = data.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
         data = { ...data, slug };
       }
+      
+      // Calculate the actual review count based on the reviews array
+      let actualReviewCount = 0;
+      if (data.reviews) {
+        try {
+          const reviewsArray = JSON.parse(data.reviews);
+          if (Array.isArray(reviewsArray)) {
+            actualReviewCount = reviewsArray.length;
+          }
+        } catch (e) {
+          console.error("Error parsing reviews:", e);
+        }
+      }
+      
+      // Update the reviewCount to match the actual number of reviews
+      data = { ...data, reviewCount: actualReviewCount };
 
       const url = isEditMode
         ? `/api/admin/products/${productId}`
@@ -596,14 +612,15 @@ export default function ProductForm() {
                           <FormLabel>Additional Image Gallery URLs</FormLabel>
                           <FormControl>
                             <div className="space-y-3">
-                              {field.value?.length > 0 ? (
+                              {field.value && field.value.length > 0 ? (
                                 <div className="space-y-2">
                                   {field.value.map((imgUrl, index) => (
                                     <div key={index} className="flex items-center gap-2">
                                       <Input 
                                         value={imgUrl} 
                                         onChange={(e) => {
-                                          const newGallery = [...field.value];
+                                          const currentValues = Array.isArray(field.value) ? field.value : [];
+                                          const newGallery = [...currentValues];
                                           newGallery[index] = e.target.value;
                                           field.onChange(newGallery);
                                         }}
@@ -614,7 +631,8 @@ export default function ProductForm() {
                                         size="sm"
                                         type="button"
                                         onClick={() => {
-                                          const newGallery = [...field.value];
+                                          const currentValues = Array.isArray(field.value) ? field.value : [];
+                                          const newGallery = [...currentValues];
                                           newGallery.splice(index, 1);
                                           field.onChange(newGallery);
                                         }}
@@ -631,7 +649,7 @@ export default function ProductForm() {
                                 size="sm"
                                 className="mt-2"
                                 onClick={() => {
-                                  const currentGallery = field.value || [];
+                                  const currentGallery = Array.isArray(field.value) ? field.value : [];
                                   field.onChange([...currentGallery, ""]);
                                 }}
                               >
