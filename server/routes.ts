@@ -19,7 +19,25 @@ const adminSessions = new Map<string, AdminSession>();
 
 // Admin middleware to check if the user has admin privileges
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  // Check for admin session ID in headers, authorization header, or cookies
+  console.log("Admin auth check - headers:", JSON.stringify(req.headers));
+  
+  // For simplified admin access in serverless environments, allow x-admin-key
+  const adminKey = req.headers["x-admin-key"] as string;
+  // Get admin secret from environment variable or use fallback for local development
+  const adminSecret = process.env.ADMIN_SECRET || "admin-secret";
+  
+  if (adminKey === adminSecret) {
+    console.log("Admin auth successful via admin-key");
+    
+    // Add default admin user data to the request
+    (req as any).adminUser = {
+      userId: 1,  // Default admin user ID
+      username: "admin"
+    };
+    return next();
+  }
+
+  // Otherwise, check for admin session ID in headers, authorization header, or cookies
   const sessionId = (
     req.headers["admin-session-id"] as string || 
     req.headers["x-admin-session-id"] as string || 
@@ -33,7 +51,7 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   if (!sessionId) {
     return res.status(403).json({ 
       success: false,
-      message: "Unauthorized access - No session ID found" 
+      message: "Unauthorized access - No session ID or admin key found" 
     });
   }
   
@@ -618,14 +636,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Product Management
   app.post("/api/admin/products", isAdmin, async (req, res) => {
     try {
+      console.log("Creating product with data:", req.body);
       const productData = insertProductSchema.parse(req.body);
+      console.log("Parsed product data:", productData);
       const product = await storage.createProduct(productData);
+      console.log("Product created successfully:", product);
       res.status(201).json(product);
     } catch (error) {
+      console.error("Error creating product:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }
-      res.status(500).json({ message: "Error creating product" });
+      // Return more detailed error message
+      res.status(500).json({ 
+        message: "Error creating product", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 

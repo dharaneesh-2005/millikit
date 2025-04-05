@@ -56,7 +56,8 @@ import { insertProductSchema, type Product } from "@shared/schema";
 import { z } from "zod";
 
 // The admin key - in a real app, this would be retrieved securely
-const ADMIN_KEY = "admin-secret";
+// Get admin key from environment variable or use fallback for local development
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_SECRET || "admin-secret";
 
 // Extended schema with validation
 const productFormSchema = insertProductSchema.extend({
@@ -274,6 +275,8 @@ export default function ProductForm() {
       
       const method = isEditMode ? "PUT" : "POST";
       
+      console.log("Submitting product data:", data);
+      
       const response = await fetch(url, {
         method,
         headers: {
@@ -283,9 +286,20 @@ export default function ProductForm() {
         body: JSON.stringify(data),
       });
       
-      if (!response.ok) throw new Error(`Failed to ${isEditMode ? "update" : "create"} product`);
+      const responseData = await response.json();
+      console.log("Response:", response.status, responseData);
       
-      const savedProduct = await response.json();
+      if (!response.ok) {
+        let errorMessage = `Failed to ${isEditMode ? "update" : "create"} product`;
+        if (responseData && responseData.error) {
+          errorMessage += `: ${responseData.error}`;
+        } else if (responseData && responseData.message) {
+          errorMessage += `: ${responseData.message}`;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const savedProduct = responseData;
       
       toast({
         title: "Success",
@@ -296,9 +310,13 @@ export default function ProductForm() {
       navigate("/admin");
     } catch (error) {
       console.error(`Error ${isEditMode ? "updating" : "creating"} product:`, error);
+      let errorMessage = `Failed to ${isEditMode ? "update" : "create"} product.`;
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
       toast({
         title: "Error",
-        description: `Failed to ${isEditMode ? "update" : "create"} product. Please try again.`,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

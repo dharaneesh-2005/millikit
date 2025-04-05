@@ -72,7 +72,8 @@ import type { Product, Contact } from "@shared/schema";
 import { formatPrice } from "@/lib/cart";
 
 // The admin key - in a real app, this would be retrieved securely (e.g., from auth context)
-const ADMIN_KEY = "admin-secret";
+// Get admin key from environment variable or use fallback for local development
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_SECRET || "admin-secret";
 
 // Format a phone number for better readability (e.g., (123) 456-7890)
 const formatPhoneNumber = (phoneNumber: string) => {
@@ -134,10 +135,9 @@ export default function AdminDashboard() {
 
   const fetchContacts = async () => {
     try {
-      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch("/api/admin/contacts", {
         headers: {
-          "admin-session-id": sessionId || "",
+          "x-admin-key": ADMIN_KEY,
         },
       });
       if (!response.ok) throw new Error("Failed to fetch contacts");
@@ -155,11 +155,10 @@ export default function AdminDashboard() {
 
   const deleteProduct = async (productId: number) => {
     try {
-      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch(`/api/admin/products/${productId}`, {
         method: "DELETE",
         headers: {
-          "admin-session-id": sessionId || "",
+          "x-admin-key": ADMIN_KEY,
         },
       });
       
@@ -187,12 +186,11 @@ export default function AdminDashboard() {
 
   const toggleProductFeatured = async (product: Product) => {
     try {
-      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch(`/api/admin/products/${product.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "admin-session-id": sessionId || "",
+          "x-admin-key": ADMIN_KEY,
         },
         body: JSON.stringify({
           featured: !product.featured,
@@ -224,12 +222,11 @@ export default function AdminDashboard() {
 
   const toggleProductInStock = async (product: Product) => {
     try {
-      const sessionId = sessionStorage.getItem("adminSessionId");
       const response = await fetch(`/api/admin/products/${product.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "admin-session-id": sessionId || "",
+          "x-admin-key": ADMIN_KEY,
         },
         body: JSON.stringify({
           inStock: !product.inStock,
@@ -261,14 +258,13 @@ export default function AdminDashboard() {
 
   const bulkDeleteProducts = async () => {
     try {
-      const sessionId = sessionStorage.getItem("adminSessionId");
       // Execute delete operations in parallel
       await Promise.all(
         selectedProductIds.map(id => 
           fetch(`/api/admin/products/${id}`, {
             method: "DELETE",
             headers: {
-              "admin-session-id": sessionId || "",
+              "x-admin-key": ADMIN_KEY,
             },
           })
         )
@@ -314,7 +310,6 @@ export default function AdminDashboard() {
 
   const bulkSetFeatured = async (featured: boolean) => {
     try {
-      const sessionId = sessionStorage.getItem("adminSessionId");
       // Execute update operations in parallel
       await Promise.all(
         selectedProductIds.map(id => 
@@ -322,7 +317,7 @@ export default function AdminDashboard() {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
-              "admin-session-id": sessionId || "",
+              "x-admin-key": ADMIN_KEY,
             },
             body: JSON.stringify({ featured }),
           })
