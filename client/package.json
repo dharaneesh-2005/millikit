@@ -1,0 +1,13 @@
+{
+  "name": "millikit-ecommerce-client",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vercel/node": "^3.0.21"
+  }
+}
