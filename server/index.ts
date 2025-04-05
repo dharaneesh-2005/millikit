@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
+import 'dotenv/config';
+import { initializeDatabase } from "./db";
 
 const app = express();
 app.use(express.json());
@@ -39,6 +41,18 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize the database if DATABASE_URL is available
+  if (process.env.DATABASE_URL) {
+    try {
+      await initializeDatabase(process.env.DATABASE_URL);
+      log('Database initialized successfully');
+    } catch (error) {
+      log(`Error initializing database: ${error}`);
+    }
+  } else {
+    log('No DATABASE_URL found, skipping database initialization');
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

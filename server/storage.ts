@@ -5,6 +5,8 @@ import {
   contacts, type Contact, type InsertContact
 } from "@shared/schema";
 import { verifyToken } from './otpUtils';
+import { PostgreSQLStorage } from './postgresql';
+import 'dotenv/config';
 
 export interface IStorage {
   // User operations
@@ -556,4 +558,17 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Determine which storage implementation to use
+// Use PostgreSQL in production and when DATABASE_URL is available
+// Otherwise, fall back to in-memory storage for development
+let storage: IStorage;
+
+if (process.env.DATABASE_URL) {
+  console.log('Using PostgreSQL storage implementation with DATABASE_URL');
+  storage = new PostgreSQLStorage(process.env.DATABASE_URL);
+} else {
+  console.log('DATABASE_URL not found, using in-memory storage implementation');
+  storage = new MemStorage();
+}
+
+export { storage };
