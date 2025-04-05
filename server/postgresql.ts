@@ -16,15 +16,78 @@ import { PgTable } from 'drizzle-orm/pg-core';
  * Uses Drizzle ORM to interact with the database
  */
 export class PostgreSQLStorage implements IStorage {
-  private db: ReturnType<typeof drizzle>;
-  private client: ReturnType<typeof postgres>;
+  private db!: ReturnType<typeof drizzle>; // Using ! to tell TypeScript this will be initialized
+  private client!: ReturnType<typeof postgres>; // Using ! to tell TypeScript this will be initialized
+  private connectionString: string;
+  private maxRetries: number = 5;
+  private retryDelay: number = 2000; // 2 seconds delay between retries
 
   constructor(connectionString: string) {
     console.log('Connecting to PostgreSQL database...');
-    // Create a Postgres client with native SSL support
-    this.client = postgres(connectionString, { ssl: 'require' });
-    // Initialize Drizzle with the client
-    this.db = drizzle(this.client);
+    this.connectionString = connectionString;
+    this.initConnection();
+  }
+  
+  private initConnection() {
+    try {
+      // Create a Postgres client with native SSL support
+      this.client = postgres(this.connectionString, { 
+        ssl: 'require',
+        max: 10, // connection pool size
+        idle_timeout: 30,
+        connect_timeout: 10,
+        onnotice: () => {}, // ignore notices
+        onparameter: () => {}, // ignore parameter updates
+      });
+      
+      // Initialize Drizzle with the client
+      this.db = drizzle(this.client);
+      console.log('Database connection established successfully');
+    } catch (error) {
+      console.error('Failed to initialize database connection:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to execute queries with auto-reconnection logic
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    retries: number = this.maxRetries
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (
+        error instanceof Error && 
+        (
+          // Check for connection termination errors
+          error.message.includes('terminating connection') ||
+          error.message.includes('Connection terminated') ||
+          error.message.includes('Connection closed')
+        ) && 
+        retries > 0
+      ) {
+        console.log(`Database connection lost. Reconnecting... (${retries} retries left)`);
+        
+        // Wait before attempting to reconnect
+        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+        
+        try {
+          // Reinitialize the connection
+          this.initConnection();
+          console.log('Successfully reconnected to database');
+          
+          // Retry the operation
+          return this.executeWithRetry(operation, retries - 1);
+        } catch (reconnectError) {
+          console.error('Failed to reconnect to database:', reconnectError);
+          throw error; // Throw the original error if reconnection fails
+        }
+      }
+      
+      // For other errors or if we're out of retries, just throw the original error
+      throw error;
+    }
   }
 
   // Helper function to ensure reviews are properly serialized/deserialized
@@ -47,157 +110,211 @@ export class PostgreSQLStorage implements IStorage {
    * User Operations
    */
   async getUser(id: number): Promise<User | undefined> {
-    const results = await this.db.select().from(users).where(eq(users.id, id));
-    return results.length > 0 ? results[0] : undefined;
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(users).where(eq(users.id, id));
+      return results.length > 0 ? results[0] : undefined;
+    });
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const results = await this.db.select().from(users).where(eq(users.username, username));
-    return results.length > 0 ? results[0] : undefined;
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(users).where(eq(users.username, username));
+      return results.length > 0 ? results[0] : undefined;
+    });
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const newUser = await this.db.insert(users).values(user).returning();
-    return newUser[0];
+    return this.executeWithRetry(async () => {
+      const newUser = await this.db.insert(users).values(user).returning();
+      return newUser[0];
+    });
   }
 
   async isAdmin(userId: number): Promise<boolean> {
-    const user = await this.getUser(userId);
-    return user?.isAdmin || false;
+    return this.executeWithRetry(async () => {
+      const user = await this.getUser(userId);
+      return user?.isAdmin || false;
+    });
   }
 
   async enableOtp(userId: number, secret: string): Promise<User | undefined> {
-    const updated = await this.db
-      .update(users)
-      .set({ otpSecret: secret, otpEnabled: true })
-      .where(eq(users.id, userId))
-      .returning();
-    
-    return updated.length > 0 ? updated[0] : undefined;
+    return this.executeWithRetry(async () => {
+      const updated = await this.db
+        .update(users)
+        .set({ otpSecret: secret, otpEnabled: true })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      return updated.length > 0 ? updated[0] : undefined;
+    });
   }
 
   async verifyOtp(userId: number, token: string): Promise<boolean> {
-    const user = await this.getUser(userId);
-    if (!user || !user.otpEnabled || !user.otpSecret) {
-      return false;
-    }
-    
-    return verifyToken(token, user.otpSecret);
+    return this.executeWithRetry(async () => {
+      const user = await this.getUser(userId);
+      if (!user || !user.otpEnabled || !user.otpSecret) {
+        return false;
+      }
+      
+      return verifyToken(token, user.otpSecret);
+    });
   }
 
   /** 
    * Product Operations
    */
   async getProducts(): Promise<Product[]> {
-    const results = await this.db.select().from(products);
-    return results;
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(products);
+      return results;
+    });
   }
 
   async getProductById(id: number): Promise<Product | undefined> {
-    const results = await this.db.select().from(products).where(eq(products.id, id));
-    return results.length > 0 ? results[0] : undefined;
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(products).where(eq(products.id, id));
+      return results.length > 0 ? results[0] : undefined;
+    });
   }
 
   async getProductBySlug(slug: string): Promise<Product | undefined> {
-    const results = await this.db.select().from(products).where(eq(products.slug, slug));
-    return results.length > 0 ? results[0] : undefined;
+    return this.executeWithRetry(async () => {
+      const results = await this.db.select().from(products).where(eq(products.slug, slug));
+      return results.length > 0 ? results[0] : undefined;
+    });
   }
 
   async getProductsByCategory(category: string): Promise<Product[]> {
-    return await this.db.select().from(products).where(eq(products.category, category));
+    return this.executeWithRetry(async () => {
+      return await this.db.select().from(products).where(eq(products.category, category));
+    });
   }
 
   async getFeaturedProducts(): Promise<Product[]> {
-    return await this.db.select().from(products).where(eq(products.featured, true));
+    return this.executeWithRetry(async () => {
+      return await this.db.select().from(products).where(eq(products.featured, true));
+    });
   }
 
   async searchProducts(query: string): Promise<Product[]> {
-    if (!query) {
-      return this.getProducts();
-    }
-    
-    // Search in name, description, and category
-    return await this.db.select().from(products).where(
-      or(
-        ilike(products.name, `%${query}%`),
-        ilike(products.description, `%${query}%`), 
-        ilike(products.category, `%${query}%`)
-      )
-    );
+    return this.executeWithRetry(async () => {
+      if (!query) {
+        return this.getProducts();
+      }
+      
+      // Search in name, description, and category
+      return await this.db.select().from(products).where(
+        or(
+          ilike(products.name, `%${query}%`),
+          ilike(products.description, `%${query}%`), 
+          ilike(products.category, `%${query}%`)
+        )
+      );
+    });
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const newProduct = await this.db.insert(products).values(product).returning();
-    return newProduct[0];
+    return this.executeWithRetry(async () => {
+      console.log("Creating product with data:", product);
+      const newProduct = await this.db.insert(products).values(product).returning();
+      console.log("Product created successfully:", newProduct[0]);
+      return newProduct[0];
+    });
   }
 
   async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product | undefined> {
-    const updated = await this.db
-      .update(products)
-      .set(product)
-      .where(eq(products.id, id))
-      .returning();
-    
-    return updated.length > 0 ? updated[0] : undefined;
+    return this.executeWithRetry(async () => {
+      console.log(`Updating product ${id} with data:`, product);
+      const updated = await this.db
+        .update(products)
+        .set(product)
+        .where(eq(products.id, id))
+        .returning();
+      
+      if (updated.length > 0) {
+        console.log("Product updated successfully:", updated[0]);
+        return updated[0];
+      }
+      console.log("No product found to update with ID:", id);
+      return undefined;
+    });
   }
 
   async deleteProduct(id: number): Promise<void> {
-    await this.db.delete(products).where(eq(products.id, id));
+    return this.executeWithRetry(async () => {
+      await this.db.delete(products).where(eq(products.id, id));
+    });
   }
 
   /** 
    * Cart Operations
    */
   async getCartItems(sessionId: string): Promise<CartItem[]> {
-    return await this.db.select().from(cartItems).where(eq(cartItems.sessionId, sessionId));
+    return this.executeWithRetry(async () => {
+      return await this.db.select().from(cartItems).where(eq(cartItems.sessionId, sessionId));
+    });
   }
 
   async getCartItemWithProduct(sessionId: string, productId: number): Promise<CartItem | undefined> {
-    const results = await this.db
-      .select()
-      .from(cartItems)
-      .where(
-        and(
-          eq(cartItems.sessionId, sessionId),
-          eq(cartItems.productId, productId)
-        )
-      );
-    
-    return results.length > 0 ? results[0] : undefined;
+    return this.executeWithRetry(async () => {
+      const results = await this.db
+        .select()
+        .from(cartItems)
+        .where(
+          and(
+            eq(cartItems.sessionId, sessionId),
+            eq(cartItems.productId, productId)
+          )
+        );
+      
+      return results.length > 0 ? results[0] : undefined;
+    });
   }
 
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
-    const newCartItem = await this.db.insert(cartItems).values(cartItem).returning();
-    return newCartItem[0];
+    return this.executeWithRetry(async () => {
+      const newCartItem = await this.db.insert(cartItems).values(cartItem).returning();
+      return newCartItem[0];
+    });
   }
 
   async updateCartItem(id: number, quantity: number): Promise<CartItem | undefined> {
-    const updated = await this.db
-      .update(cartItems)
-      .set({ quantity })
-      .where(eq(cartItems.id, id))
-      .returning();
-    
-    return updated.length > 0 ? updated[0] : undefined;
+    return this.executeWithRetry(async () => {
+      const updated = await this.db
+        .update(cartItems)
+        .set({ quantity })
+        .where(eq(cartItems.id, id))
+        .returning();
+      
+      return updated.length > 0 ? updated[0] : undefined;
+    });
   }
 
   async removeFromCart(id: number): Promise<void> {
-    await this.db.delete(cartItems).where(eq(cartItems.id, id));
+    return this.executeWithRetry(async () => {
+      await this.db.delete(cartItems).where(eq(cartItems.id, id));
+    });
   }
 
   async clearCart(sessionId: string): Promise<void> {
-    await this.db.delete(cartItems).where(eq(cartItems.sessionId, sessionId));
+    return this.executeWithRetry(async () => {
+      await this.db.delete(cartItems).where(eq(cartItems.sessionId, sessionId));
+    });
   }
 
   /** 
    * Contact Operations
    */
   async createContact(contact: InsertContact): Promise<Contact> {
-    const newContact = await this.db.insert(contacts).values(contact).returning();
-    return newContact[0];
+    return this.executeWithRetry(async () => {
+      const newContact = await this.db.insert(contacts).values(contact).returning();
+      return newContact[0];
+    });
   }
 
   async getContacts(): Promise<Contact[]> {
-    return await this.db.select().from(contacts);
+    return this.executeWithRetry(async () => {
+      return await this.db.select().from(contacts);
+    });
   }
 }
