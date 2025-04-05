@@ -618,47 +618,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Product Management
   app.post("/api/admin/products", isAdmin, async (req, res) => {
     try {
-      console.log('Creating product with data:', JSON.stringify(req.body, null, 2));
-      
-      // Ensure reviews is a string if present
-      let productData = req.body;
-      if (productData.reviews && typeof productData.reviews !== 'string') {
-        productData.reviews = JSON.stringify(productData.reviews);
-      }
-      
-      // Handle image gallery array
-      if (productData.imageGallery && !Array.isArray(productData.imageGallery)) {
-        try {
-          productData.imageGallery = [productData.imageUrl, productData.imageUrl];
-        } catch (e) {
-          console.error('Error processing imageGallery:', e);
-          productData.imageGallery = [productData.imageUrl];
-        }
-      }
-      
-      // Handle weight options array
-      if (productData.weightOptions && !Array.isArray(productData.weightOptions)) {
-        try {
-          productData.weightOptions = productData.weightOptions.split(',').map(w => w.trim());
-        } catch (e) {
-          console.error('Error processing weightOptions:', e);
-          productData.weightOptions = ['500g'];
-        }
-      }
-      
-      const validatedData = insertProductSchema.parse(productData);
-      const product = await storage.createProduct(validatedData);
-      console.log('Product created successfully:', product.id);
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
       res.status(201).json(product);
     } catch (error) {
-      console.error('Error creating product:', error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
-        });
+        return res.status(400).json({ message: error.errors });
       }
-      res.status(500).json({ message: "Error creating product. Please check server logs." });
+      res.status(500).json({ message: "Error creating product" });
     }
   });
 
@@ -673,47 +640,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-      
-      console.log('Updating product with data:', JSON.stringify(req.body, null, 2));
-      
-      // Ensure reviews is a string if present
-      let productData = req.body;
-      if (productData.reviews && typeof productData.reviews !== 'string') {
-        productData.reviews = JSON.stringify(productData.reviews);
-      }
-      
-      // Handle image gallery array
-      if (productData.imageGallery && !Array.isArray(productData.imageGallery)) {
-        try {
-          productData.imageGallery = [productData.imageUrl, productData.imageUrl];
-        } catch (e) {
-          console.error('Error processing imageGallery:', e);
-          productData.imageGallery = [productData.imageUrl];
-        }
-      }
-      
-      // Handle weight options array
-      if (productData.weightOptions && !Array.isArray(productData.weightOptions)) {
-        try {
-          productData.weightOptions = productData.weightOptions.split(',').map(w => w.trim());
-        } catch (e) {
-          console.error('Error processing weightOptions:', e);
-          productData.weightOptions = ['500g'];
-        }
-      }
 
-      const updatedProduct = await storage.updateProduct(id, productData);
-      console.log('Product updated successfully:', id);
+      const updatedProduct = await storage.updateProduct(id, req.body);
       res.json(updatedProduct);
     } catch (error) {
-      console.error('Error updating product:', error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
-        });
+        return res.status(400).json({ message: error.errors });
       }
-      res.status(500).json({ message: "Error updating product. Please check server logs." });
+      res.status(500).json({ message: "Error updating product" });
     }
   });
 
