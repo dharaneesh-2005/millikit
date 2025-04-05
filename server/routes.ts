@@ -19,21 +19,39 @@ const adminSessions = new Map<string, AdminSession>();
 
 // Admin middleware to check if the user has admin privileges
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  const sessionId = req.headers["admin-session-id"] as string;
+  // Check for admin session ID in headers, authorization header, or cookies
+  const sessionId = (
+    req.headers["admin-session-id"] as string || 
+    req.headers["x-admin-session-id"] as string || 
+    req.headers["authorization"]?.replace("Bearer ", "") ||
+    req.cookies?.adminSessionId
+  );
   
-  if (!sessionId || !adminSessions.has(sessionId)) {
+  console.log("Admin auth check - sessionId:", sessionId);
+  console.log("Admin auth check - headers:", req.headers);
+  
+  if (!sessionId) {
     return res.status(403).json({ 
       success: false,
-      message: "Unauthorized access" 
+      message: "Unauthorized access - No session ID found" 
+    });
+  }
+  
+  if (!adminSessions.has(sessionId)) {
+    console.log("Admin session not found for ID:", sessionId);
+    return res.status(403).json({ 
+      success: false,
+      message: "Unauthorized access - Invalid session" 
     });
   }
   
   const session = adminSessions.get(sessionId)!;
+  console.log("Admin session found:", session);
   
   if (!session.isAuthenticated || !session.isAdmin) {
     return res.status(403).json({ 
       success: false,
-      message: "Unauthorized access" 
+      message: "Unauthorized access - Not authenticated or not admin" 
     });
   }
   
@@ -310,6 +328,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAuthenticated: true
       });
       
+      // Set cookie with session ID for cross-domain compatibility
+      res.cookie('adminSessionId', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+      
       res.status(200).json({
         success: true,
         sessionId,
@@ -521,11 +547,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Logout
   app.post("/api/admin/logout", async (req, res) => {
     try {
-      const sessionId = req.headers["admin-session-id"] as string;
+      const sessionId = (
+        req.headers["admin-session-id"] as string || 
+        req.headers["x-admin-session-id"] as string || 
+        req.headers["authorization"]?.replace("Bearer ", "") ||
+        req.cookies?.adminSessionId
+      );
       
       if (sessionId && adminSessions.has(sessionId)) {
         adminSessions.delete(sessionId);
       }
+      
+      // Clear the session cookie
+      res.clearCookie('adminSessionId');
       
       res.status(200).json({
         success: true,
@@ -543,7 +577,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Session Check
   app.get("/api/admin/session", async (req, res) => {
     try {
-      const sessionId = req.headers["admin-session-id"] as string;
+      // Check for admin session ID in headers, authorization header, or cookies
+      const sessionId = (
+        req.headers["admin-session-id"] as string || 
+        req.headers["x-admin-session-id"] as string || 
+        req.headers["authorization"]?.replace("Bearer ", "") ||
+        req.cookies?.adminSessionId
+      );
+      
+      console.log("Admin session check - sessionId:", sessionId);
+      console.log("Admin session check - headers:", req.headers);
       
       if (!sessionId || !adminSessions.has(sessionId)) {
         return res.status(401).json({ 

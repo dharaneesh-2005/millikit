@@ -2,11 +2,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import { createServer } from 'http';
 import { registerRoutes } from '../server/routes';
+import cookieParser from 'cookie-parser';
 
 // Create Express app instance
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 // Setup logging middleware
 app.use((req, res, next) => {
