@@ -6,7 +6,8 @@ import { CartItem, Product } from "@shared/schema";
 export function calculateCartSummary(cartItems: (CartItem & { product?: Product })[]) {
   // Calculate subtotal
   const subtotal = cartItems.reduce((total, item) => {
-    const price = parseFloat(item.product?.price || "0");
+    // Use displayPrice (set for weight-specific pricing) if available, otherwise use default price
+    const price = parseFloat(item.product?.displayPrice || item.product?.price || "0");
     return total + (price * item.quantity);
   }, 0);
   

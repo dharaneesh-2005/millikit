@@ -288,14 +288,16 @@ export default function ProductDetail() {
   // Handle add to cart
   const handleAddToCart = () => {
     if (product) {
-      addToCart(product.id, quantity);
+      addToCart(product.id, quantity, selectedWeight);
+      console.log(`Added to cart: ${product.name} - ${quantity} units of ${selectedWeight} weight`);
     }
   };
   
   // Handle buy now
   const handleBuyNow = () => {
     if (product) {
-      addToCart(product.id, quantity);
+      addToCart(product.id, quantity, selectedWeight);
+      console.log(`Buy now: ${product.name} - ${quantity} units of ${selectedWeight} weight`);
       window.location.href = "/checkout";
     }
   };

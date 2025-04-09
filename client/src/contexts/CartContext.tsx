@@ -11,7 +11,7 @@ import { CartItem, Product } from "@shared/schema";
 
 interface CartContextType {
   cartItems: (CartItem & { product?: Product })[];
-  addToCart: (productId: number, quantity: number) => Promise<void>;
+  addToCart: (productId: number, quantity: number, selectedWeight?: string) => Promise<void>;
   updateCartItem: (itemId: number, quantity: number) => Promise<void>;
   removeFromCart: (itemId: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -72,12 +72,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   // Add item to cart
-  const addToCart = async (productId: number, quantity: number) => {
+  const addToCart = async (productId: number, quantity: number, selectedWeight?: string) => {
     try {
       setIsLoading(true);
       
       // Make sure we're sending the sessionId in the headers
       const savedSessionId = localStorage.getItem("cartSessionId") || sessionId;
+      
+      // Create an object to store additional information including the selected weight
+      const metaData = selectedWeight ? { selectedWeight } : undefined;
       
       const response = await fetch("/api/cart", {
         method: "POST",
@@ -88,6 +91,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           productId,
           quantity,
+          metaData: JSON.stringify(metaData)
         }),
       });
       
@@ -110,17 +114,52 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
       
       if (existingItemIndex !== -1) {
-        // Item exists, update quantity
-        const updatedItems = [...cartItems];
-        updatedItems[existingItemIndex].quantity += quantity;
-        setCartItems(updatedItems);
+        // If the same product with a different weight is being added, treat it as a new item
+        const existingItem = cartItems[existingItemIndex];
+        const existingMetaData = existingItem.metaData ? JSON.parse(existingItem.metaData) : {};
+        
+        if (selectedWeight && existingMetaData.selectedWeight !== selectedWeight) {
+          // Get product details to display in cart
+          const productResponse = await fetch(`/api/products/${productId}`);
+          const product = await productResponse.json();
+          
+          // Add as a new item with different weight
+          setCartItems([...cartItems, { ...newItem, product }]);
+        } else {
+          // Same weight or no weight specified, update quantity
+          const updatedItems = [...cartItems];
+          updatedItems[existingItemIndex].quantity += quantity;
+          setCartItems(updatedItems);
+        }
       } else {
         // Get product details to display in cart
         const productResponse = await fetch(`/api/products/${productId}`);
         const product = await productResponse.json();
         
-        // Add new item
-        setCartItems([...cartItems, { ...newItem, product }]);
+        // If weight is selected, get the appropriate price from weight prices
+        let itemPrice = product.price;
+        
+        if (selectedWeight && product.weightPrices) {
+          try {
+            const weightPrices = JSON.parse(product.weightPrices);
+            if (weightPrices[selectedWeight] && weightPrices[selectedWeight].price) {
+              itemPrice = weightPrices[selectedWeight].price;
+              console.log(`Using weight-specific price for ${selectedWeight}: ${itemPrice}`);
+            }
+          } catch (e) {
+            console.error("Error parsing weight prices:", e);
+          }
+        }
+        
+        // Add new item with the product and weight-specific price
+        setCartItems([...cartItems, { 
+          ...newItem, 
+          product: {
+            ...product,
+            displayPrice: itemPrice,
+            selectedWeight: selectedWeight
+          } 
+        }]);
       }
       
       toast({

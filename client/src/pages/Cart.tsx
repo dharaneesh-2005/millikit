@@ -140,8 +140,16 @@ export default function Cart() {
                               {item.product?.shortDescription?.substring(0, 60)}
                               {item.product?.shortDescription && item.product.shortDescription.length > 60 ? '...' : ''}
                             </p>
+                            
+                            {/* Display selected weight if available */}
+                            {item.metaData && (
+                              <p className="text-sm text-gray-600 mb-1">
+                                Weight: <span className="font-medium">{JSON.parse(item.metaData)?.selectedWeight || 'Standard'}</span>
+                              </p>
+                            )}
+                            
                             <p className="text-green-600 font-bold">
-                              ₹{item.product?.price}
+                              ₹{item.product?.displayPrice || item.product?.price}
                             </p>
                           </div>
                           
