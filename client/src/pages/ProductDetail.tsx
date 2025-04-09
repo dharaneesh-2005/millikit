@@ -181,18 +181,31 @@ export default function ProductDetail() {
             product.weightOptions.forEach(weight => {
               if (parsedPrices[weight]) {
                 // Check if the weight price has the new structure (with price and comparePrice)
-                if (typeof parsedPrices[weight] === 'object' && parsedPrices[weight].price) {
+                if (typeof parsedPrices[weight] === 'object' && parsedPrices[weight] !== null) {
                   // New structure with price and comparePrice
+                  // Handle the case where price might be an object instead of a string
+                  const priceValue = typeof parsedPrices[weight].price === 'object' 
+                    ? (product.price || '0') // Fallback to product price if price is an object
+                    : parsedPrices[weight].price;
+                    
                   filteredPrices[weight] = {
-                    price: parsedPrices[weight].price,
+                    price: priceValue,
                     comparePrice: parsedPrices[weight].comparePrice
                   };
+                  
+                  console.log(`Processed weight ${weight}, price: ${priceValue}, comparePrice: ${parsedPrices[weight].comparePrice}`);
                 } else {
-                  // Old structure (string price)
+                  // Old structure (string price) or direct value
+                  const priceValue = typeof parsedPrices[weight] === 'string' 
+                    ? parsedPrices[weight]
+                    : parsedPrices[weight]?.toString() || product.price;
+                    
                   filteredPrices[weight] = {
-                    price: parsedPrices[weight].toString(),
+                    price: priceValue,
                     comparePrice: product.comparePrice || undefined
                   };
+                  
+                  console.log(`Processed weight ${weight} with old structure, price: ${priceValue}`);
                 }
               }
             });
