@@ -58,6 +58,14 @@
     right: 100px;
     z-index: 1000;
   }
+  
+  @media (max-width: 768px) {
+    .language-selector {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+  }
 
   .form-input:focus {
     border-color: #16a34a;

@@ -80,7 +80,9 @@ export default function Header() {
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Admin login link - hidden on mobile */}
             <motion.div
+              className="hidden md:block"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
@@ -130,7 +132,7 @@ export default function Header() {
         <AnimatePresence>
           {showMobileMenu && (
             <motion.div 
-              className="md:hidden py-4"
+              className="md:hidden py-4 mt-4 bg-white/95 backdrop-blur-md rounded-lg shadow-lg"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
@@ -145,7 +147,7 @@ export default function Header() {
                 >
                   <Link 
                     href={path === '/' ? path : path}
-                    className={`block py-2 ${isActivePath(path === '/' ? path : path) ? 'text-green-600' : 'text-gray-700 hover:text-green-600'} transition-colors`}
+                    className={`block py-3 px-4 ${isActivePath(path === '/' ? path : path) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors border-b border-gray-100 last:border-b-0`}
                     onClick={() => setShowMobileMenu(false)}
                   >
                     {path === '/' ? t('home') : 
