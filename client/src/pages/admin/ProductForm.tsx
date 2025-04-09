@@ -300,11 +300,25 @@ export default function ProductForm() {
       // Update the reviewCount to match the actual number of reviews
       data = { ...data, reviewCount: actualReviewCount };
       
-      // Convert weightPrices array to JSON string and add to form data
+      // Ensure weight prices are properly added to form data
       if (weightPrices.length > 0) {
+        // Convert weightPrices array to JSON string if not already converted
+        if (!data.weightPrices || data.weightPrices === "") {
+          console.log("Weight prices not found in form data, adding from state");
+          const pricesObj: Record<string, string> = {};
+          weightPrices.forEach(item => {
+            pricesObj[item.weight] = item.price;
+          });
+          data = { ...data, weightPrices: JSON.stringify(pricesObj) };
+        } else {
+          console.log("Using already saved weight prices from form:", data.weightPrices);
+        }
+      } else if (data.weightOptions && data.weightOptions.length > 0) {
+        // If we have weight options but no prices, create default prices
+        console.log("Creating default weight prices for weight options");
         const pricesObj: Record<string, string> = {};
-        weightPrices.forEach(item => {
-          pricesObj[item.weight] = item.price;
+        data.weightOptions.forEach(option => {
+          pricesObj[option] = data.price || "0";
         });
         data = { ...data, weightPrices: JSON.stringify(pricesObj) };
       }
@@ -1026,34 +1040,44 @@ export default function ProductForm() {
                             </div>
                           </div>
                           
-                          <div className="flex justify-end">
-                            <Button 
-                              type="button" 
-                              variant="secondary"
-                              onClick={() => {
-                                // Convert weightPrices array to JSON string and add to form data
-                                if (weightPrices.length > 0) {
-                                  const pricesObj: Record<string, string> = {};
-                                  weightPrices.forEach(item => {
-                                    pricesObj[item.weight] = item.price;
-                                  });
-                                  form.setValue("weightPrices", JSON.stringify(pricesObj));
-                                  
-                                  // Show success message
-                                  toast({
-                                    title: "Weight prices saved",
-                                    description: "Weight-specific prices have been saved to the form. Remember to click 'Update Product' to save to database."
-                                  });
-                                  
-                                  // Log to console for debugging
-                                  console.log("Weight prices saved to form:", pricesObj);
-                                  console.log("Form value:", form.getValues("weightPrices"));
-                                }
-                              }}
-                            >
-                              <Save className="h-4 w-4 mr-2" />
-                              Save Weight Prices
-                            </Button>
+                          <div className="p-4 mt-2 border border-green-200 bg-green-50 rounded-md">
+                            <h4 className="text-green-700 font-medium mb-2">Save Your Weight Prices</h4>
+                            <p className="text-sm text-green-600 mb-4">
+                              You've set up weight-specific prices. To save them, you must:
+                            </p>
+                            <ol className="text-sm text-green-600 mb-4 pl-5 list-decimal">
+                              <li className="mb-1">First click <span className="font-semibold">"Save Weight Prices"</span> below</li>
+                              <li>Then click <span className="font-semibold">"Update Product"</span> at the bottom of the form</li>
+                            </ol>
+                            <div className="flex justify-end">
+                              <Button 
+                                type="button" 
+                                variant="default"
+                                onClick={() => {
+                                  // Convert weightPrices array to JSON string and add to form data
+                                  if (weightPrices.length > 0) {
+                                    const pricesObj: Record<string, string> = {};
+                                    weightPrices.forEach(item => {
+                                      pricesObj[item.weight] = item.price;
+                                    });
+                                    form.setValue("weightPrices", JSON.stringify(pricesObj));
+                                    
+                                    // Show success message
+                                    toast({
+                                      title: "Weight prices saved to form",
+                                      description: "Remember to click 'Update Product' at the bottom to save to database."
+                                    });
+                                    
+                                    // Log to console for debugging
+                                    console.log("Weight prices saved to form:", pricesObj);
+                                    console.log("Form value:", form.getValues("weightPrices"));
+                                  }
+                                }}
+                              >
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Weight Prices
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ) : (
