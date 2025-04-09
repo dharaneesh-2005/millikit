@@ -50,7 +50,10 @@ import {
   Utensils, 
   Leaf,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  Edit,
+  Trash2,
+  ThumbsUp
 } from "lucide-react";
 import { insertProductSchema, type Product } from "@shared/schema";
 import { z } from "zod";
@@ -432,7 +435,449 @@ export default function ProductForm() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Basic Information Section */}
-                  {/* Rest of form content */}
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Product Name *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter product name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="slug"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Slug (URL-friendly name)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="product-slug" 
+                                {...field} 
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Leave blank to auto-generate from name
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Price (₹) *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="199.99" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="comparePrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Compare-at Price (₹)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="249.99" 
+                                {...field} 
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Original price for showing discounts
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="badge"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Badge</FormLabel>
+                            <FormControl>
+                              <Input placeholder="New / Sale / Organic" {...field} value={field.value || ""} />
+                            </FormControl>
+                            <FormDescription>
+                              Special tag to highlight this product
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Category *</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {categories.map(category => (
+                                  <SelectItem key={category.value} value={category.value}>
+                                    {category.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex space-x-4">
+                        <FormField
+                          control={form.control}
+                          name="inStock"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer">
+                                In Stock
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="featured"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer">
+                                Featured
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Description Section */}
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Description & Images</h2>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="shortDescription"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Short Description *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Brief summary of the product" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Description *</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Detailed description of the product" 
+                                className="min-h-32" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="imageUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Main Image URL *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://example.com/image.jpg" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="imageGallery"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Additional Images (One per line)</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" 
+                                className="min-h-24" 
+                                value={(field.value || []).join("\n")}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const images = value
+                                    .split("\n")
+                                    .map(url => url.trim())
+                                    .filter(url => url !== "");
+                                  field.onChange(images);
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Enter each image URL on a new line
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="stockQuantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stock Quantity</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="100"
+                                {...field}
+                                onChange={e => {
+                                  const value = parseInt(e.target.value);
+                                  field.onChange(isNaN(value) ? 0 : value);
+                                }}
+                                value={field.value || 0}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Additional Information Section */}
+                  <div className="md:col-span-2">
+                    <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="nutritionFacts"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nutrition Facts</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Serving Size: 100g&#10;Calories: 340&#10;Protein: 12g&#10;Fat: 3g&#10;Carbohydrates: 70g" 
+                                className="min-h-24" 
+                                {...field} 
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="cookingInstructions"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cooking Instructions</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Instructions for preparing this product" 
+                                className="min-h-24" 
+                                {...field} 
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Reviews Section */}
+                  <div className="md:col-span-2">
+                    <h2 className="text-xl font-semibold mb-4">Customer Reviews</h2>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-8">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="font-medium text-gray-800">Manage Reviews</h3>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleAddReview}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Review
+                          </Button>
+                        </div>
+                        
+                        {reviews.length > 0 ? (
+                          <div className="space-y-3">
+                            {reviews.map((review, index) => (
+                              <div key={review.id} className="flex items-start justify-between p-3 bg-white rounded-md border">
+                                <div className="flex-1">
+                                  <div className="flex items-center mb-1">
+                                    <span className="font-medium text-gray-800 mr-2">{review.name}</span>
+                                    <span className="text-sm text-gray-500">{review.date}</span>
+                                  </div>
+                                  <div className="flex items-center mb-2">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star 
+                                        key={i} 
+                                        className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                      />
+                                    ))}
+                                    <span className="ml-2 text-sm text-gray-500">({review.rating}/5)</span>
+                                  </div>
+                                  <p className="text-gray-600 text-sm">{review.comment}</p>
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    <ThumbsUp className="h-3 w-3 inline mr-1" /> {review.helpfulCount} people found this helpful
+                                  </div>
+                                </div>
+                                <div className="flex space-x-1">
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleEditReview(review, index)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleDeleteReview(index)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-gray-500">
+                            No reviews yet. Add some reviews to show on the product page.
+                          </div>
+                        )}
+                        
+                        {editingReview && (
+                          <div className="mt-4 p-4 border border-blue-200 bg-blue-50 rounded-md">
+                            <h4 className="font-medium text-blue-800 mb-3">
+                              {editReviewIndex >= 0 ? "Edit Review" : "Add New Review"}
+                            </h4>
+                            <div className="space-y-3">
+                              <div>
+                                <Label htmlFor="reviewName">Name</Label>
+                                <Input 
+                                  id="reviewName"
+                                  value={editingReview.name}
+                                  onChange={(e) => setEditingReview({...editingReview, name: e.target.value})}
+                                  placeholder="Customer name"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="reviewRating">Rating</Label>
+                                <div className="flex items-center mt-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <button
+                                      key={i}
+                                      type="button"
+                                      onClick={() => setEditingReview({...editingReview, rating: i + 1})}
+                                      className="focus:outline-none"
+                                    >
+                                      <Star 
+                                        className={`h-6 w-6 ${i < editingReview.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                      />
+                                    </button>
+                                  ))}
+                                  <span className="ml-2 text-sm text-gray-600">
+                                    ({editingReview.rating}/5)
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <Label htmlFor="reviewComment">Review</Label>
+                                <Textarea 
+                                  id="reviewComment"
+                                  value={editingReview.comment}
+                                  onChange={(e) => setEditingReview({...editingReview, comment: e.target.value})}
+                                  placeholder="Write a review comment"
+                                  className="mt-1"
+                                  rows={4}
+                                />
+                              </div>
+                              <div className="flex justify-end space-x-2 pt-2">
+                                <Button 
+                                  type="button" 
+                                  variant="outline"
+                                  onClick={handleCancelEdit}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  type="button"
+                                  onClick={handleSaveReview}
+                                >
+                                  Save Review
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   
                   {/* Weight Prices Section */}
                   <div className="md:col-span-2">

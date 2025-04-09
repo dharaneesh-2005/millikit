@@ -93,7 +93,8 @@ export default function ProductDetail() {
       
       // Send the updated reviews to the server
       await apiRequest("PATCH", `/api/products/${product.id}`, {
-        reviews: JSON.stringify(updatedReviews)
+        reviews: JSON.stringify(updatedReviews),
+        reviewCount: updatedReviews.length
       });
       
       return updatedReviews;
