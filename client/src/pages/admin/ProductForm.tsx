@@ -39,6 +39,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, 
+  Check,
   Loader2, 
   Plus, 
   X, 
@@ -111,6 +112,7 @@ export default function ProductForm() {
 
   // State for managing weight-price combinations
   const [weightPrices, setWeightPrices] = useState<WeightPriceItem[]>([]);
+  const [weightPricesSaved, setWeightPricesSaved] = useState(false);
   
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -988,6 +990,7 @@ export default function ProductForm() {
                                 }
                               });
                               setWeightPrices(newWeightPrices);
+                              setWeightPricesSaved(false); // Reset saved state when updating prices
                             }}
                           >
                             <Plus className="h-4 w-4 mr-2" />
@@ -1016,6 +1019,7 @@ export default function ProductForm() {
                                         const newWeightPrices = [...weightPrices];
                                         newWeightPrices[index].price = e.target.value;
                                         setWeightPrices(newWeightPrices);
+                                        setWeightPricesSaved(false);
                                       }}
                                       className="h-8"
                                       placeholder="Price"
@@ -1030,6 +1034,7 @@ export default function ProductForm() {
                                         const newWeightPrices = [...weightPrices];
                                         newWeightPrices.splice(index, 1);
                                         setWeightPrices(newWeightPrices);
+                                        setWeightPricesSaved(false);
                                       }}
                                     >
                                       <X className="h-4 w-4" />
@@ -1041,19 +1046,33 @@ export default function ProductForm() {
                           </div>
                           
                           <div className="p-4 mt-2 border border-green-200 bg-green-50 rounded-md">
-                            <h4 className="text-green-700 font-medium mb-2">Save Your Weight Prices</h4>
-                            <p className="text-sm text-green-600 mb-4">
-                              You've set up weight-specific prices. To save them, you must:
-                            </p>
-                            <ol className="text-sm text-green-600 mb-4 pl-5 list-decimal">
-                              <li className="mb-1">First click <span className="font-semibold">"Save Weight Prices"</span> below</li>
-                              <li>Then click <span className="font-semibold">"Update Product"</span> at the bottom of the form</li>
-                            </ol>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="text-green-700 font-medium mb-2">Save Your Weight Prices</h4>
+                                <p className="text-sm text-green-600 mb-4">
+                                  You've set up weight-specific prices. To save them, you must:
+                                </p>
+                                <ol className="text-sm text-green-600 mb-4 pl-5 list-decimal">
+                                  <li className="mb-1">First click <span className="font-semibold">"Save Weight Prices"</span> below</li>
+                                  <li>Then click <span className="font-semibold">"Update Product"</span> at the bottom of the form</li>
+                                </ol>
+                              </div>
+                              
+                              {weightPricesSaved && (
+                                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-md flex items-center">
+                                  <Check className="h-4 w-4 mr-2" />
+                                  <span className="text-sm font-medium">Prices saved to form</span>
+                                </div>
+                              )}
+                            </div>
                             <div className="flex justify-end">
                               <Button 
                                 type="button" 
                                 variant="default"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  // Prevent the default form submission
+                                  e.preventDefault();
+                                  
                                   // Convert weightPrices array to JSON string and add to form data
                                   if (weightPrices.length > 0) {
                                     const pricesObj: Record<string, string> = {};
@@ -1061,6 +1080,9 @@ export default function ProductForm() {
                                       pricesObj[item.weight] = item.price;
                                     });
                                     form.setValue("weightPrices", JSON.stringify(pricesObj));
+                                    
+                                    // Set saved state to true to show visual indicator
+                                    setWeightPricesSaved(true);
                                     
                                     // Show success message
                                     toast({

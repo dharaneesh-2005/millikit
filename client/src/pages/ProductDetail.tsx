@@ -163,19 +163,24 @@ export default function ProductDetail() {
       }
       
       // Parse weight prices if available
-      if (product.weightPrices) {
+      if (product.weightPrices && product.weightPrices !== "") {
         try {
+          console.log("Parsing weight prices from:", product.weightPrices);
           const parsedPrices = JSON.parse(product.weightPrices);
+          console.log("Successfully parsed weight prices:", parsedPrices);
           setWeightPrices(parsedPrices);
           
           // Set initial current price based on default selected weight
           const initialWeight = product.weightOptions && product.weightOptions.length > 0 
             ? product.weightOptions[0] 
             : "500g";
-            
+          
+          console.log("Initial selected weight:", initialWeight);  
           if (parsedPrices[initialWeight]) {
+            console.log("Setting price for weight", initialWeight, "to", parsedPrices[initialWeight]);
             setCurrentPrice(parsedPrices[initialWeight]);
           } else {
+            console.log("No specific price for weight", initialWeight, "using default price", product.price);
             setCurrentPrice(product.price);
           }
         } catch (e) {
@@ -184,6 +189,7 @@ export default function ProductDetail() {
           setCurrentPrice(product.price);
         }
       } else {
+        console.log("No weight prices available, using default price");
         setWeightPrices({});
         setCurrentPrice(product.price);
       }
