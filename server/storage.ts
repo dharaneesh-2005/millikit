@@ -6,7 +6,21 @@ import {
 } from "@shared/schema";
 import { verifyToken } from './otpUtils';
 import { PostgreSQLStorage } from './postgresql';
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+
+// Try to load environment variables from .env file if not already loaded
+try {
+  if (fs.existsSync('.env') && !process.env.DATABASE_URL) {
+    const envConfig = dotenv.parse(fs.readFileSync('.env'));
+    for (const key in envConfig) {
+      process.env[key] = envConfig[key];
+    }
+    console.log('Storage: Loaded environment variables from .env file');
+  }
+} catch (error) {
+  console.error('Storage: Error loading .env file:', error);
+}
 
 export interface IStorage {
   // User operations

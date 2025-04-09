@@ -2,8 +2,22 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
 import { initializeDatabase } from "./db";
+
+// Try to load environment variables from .env file
+try {
+  if (fs.existsSync('.env')) {
+    const envConfig = dotenv.parse(fs.readFileSync('.env'));
+    for (const key in envConfig) {
+      process.env[key] = envConfig[key];
+    }
+    console.log('Loaded environment variables from .env file');
+  }
+} catch (error) {
+  console.error('Error loading .env file:', error);
+}
 
 const app = express();
 app.use(express.json());
