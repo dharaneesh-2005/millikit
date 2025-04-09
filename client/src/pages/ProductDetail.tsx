@@ -21,8 +21,9 @@ export default function ProductDetail() {
   const [mainImage, setMainImage] = useState("");
   
   // State for weight-specific prices
-  const [weightPrices, setWeightPrices] = useState<Record<string, string>>({});
+  const [weightPrices, setWeightPrices] = useState<Record<string, {price: string, comparePrice?: string}>>({});
   const [currentPrice, setCurrentPrice] = useState<string>("");
+  const [currentComparePrice, setCurrentComparePrice] = useState<string>("");
   
   // Review form state
   const [isReviewFormOpen, setIsReviewFormOpen] = useState<boolean>(false);
@@ -92,9 +93,12 @@ export default function ProductDetail() {
       }
       
       // Send the updated reviews to the server
-      await apiRequest("PATCH", `/api/products/${product.id}`, {
-        reviews: JSON.stringify(updatedReviews),
-        reviewCount: updatedReviews.length
+      await apiRequest(`/api/products/${product.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          reviews: JSON.stringify(updatedReviews),
+          reviewCount: updatedReviews.length
+        })
       });
       
       return updatedReviews;
@@ -172,11 +176,24 @@ export default function ProductDetail() {
           
           // Filter the weight prices to only include weights that are in weightOptions
           // This ensures removed weight options don't show up
-          const filteredPrices: Record<string, string> = {};
+          const filteredPrices: Record<string, {price: string, comparePrice?: string}> = {};
           if (product.weightOptions && Array.isArray(product.weightOptions)) {
             product.weightOptions.forEach(weight => {
               if (parsedPrices[weight]) {
-                filteredPrices[weight] = parsedPrices[weight];
+                // Check if the weight price has the new structure (with price and comparePrice)
+                if (typeof parsedPrices[weight] === 'object' && parsedPrices[weight].price) {
+                  // New structure with price and comparePrice
+                  filteredPrices[weight] = {
+                    price: parsedPrices[weight].price,
+                    comparePrice: parsedPrices[weight].comparePrice
+                  };
+                } else {
+                  // Old structure (string price)
+                  filteredPrices[weight] = {
+                    price: parsedPrices[weight].toString(),
+                    comparePrice: product.comparePrice || undefined
+                  };
+                }
               }
             });
           }
@@ -190,11 +207,13 @@ export default function ProductDetail() {
           
           console.log("Initial selected weight:", initialWeight);  
           if (filteredPrices[initialWeight]) {
-            console.log("Setting price for weight", initialWeight, "to", filteredPrices[initialWeight]);
-            setCurrentPrice(filteredPrices[initialWeight]);
+            console.log("Setting price for weight", initialWeight, "to", filteredPrices[initialWeight].price);
+            setCurrentPrice(filteredPrices[initialWeight].price);
+            setCurrentComparePrice(filteredPrices[initialWeight].comparePrice || "");
           } else {
             console.log("No specific price for weight", initialWeight, "using default price", product.price);
             setCurrentPrice(product.price);
+            setCurrentComparePrice(product.comparePrice || "");
           }
         } catch (e) {
           console.error("Failed to parse weight prices:", e);
@@ -290,10 +309,13 @@ export default function ProductDetail() {
       }
       
       // Send the updated reviews to the server
-      await apiRequest("PATCH", `/api/products/${product.id}`, {
-        reviews: JSON.stringify(updatedReviews),
-        // Also update the reviewCount field for admin dashboard display
-        reviewCount: updatedReviews.length
+      await apiRequest(`/api/products/${product.id}`, {
+        method: "PATCH", 
+        body: JSON.stringify({
+          reviews: JSON.stringify(updatedReviews),
+          // Also update the reviewCount field for admin dashboard display
+          reviewCount: updatedReviews.length
+        })
       });
       
       return updatedReviews;
@@ -501,9 +523,11 @@ export default function ProductDetail() {
                           setSelectedWeight(weight);
                           // Update price when weight option changes
                           if (weightPrices[weight]) {
-                            setCurrentPrice(weightPrices[weight]);
+                            setCurrentPrice(weightPrices[weight].price);
+                            setCurrentComparePrice(weightPrices[weight].comparePrice || "");
                           } else {
                             setCurrentPrice(product.price);
+                            setCurrentComparePrice(product.comparePrice || "");
                           }
                         }}
                         className="sr-only peer" 

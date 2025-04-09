@@ -83,6 +83,7 @@ type ProductFormValues = z.infer<typeof productFormSchema>;
 interface WeightPriceItem {
   weight: string;
   price: string;
+  comparePrice?: string;
 }
 
 // For review management, we'll use a local type
@@ -178,17 +179,44 @@ export default function ProductForm() {
       if (product.weightPrices) {
         try {
           const pricesObj = JSON.parse(product.weightPrices);
-          const weightPriceItems = Object.entries(pricesObj).map(([weight, price]) => ({
-            weight,
-            price: String(price)
-          }));
+          
+          // Get weight options from product
+          const weights = product.weightOptions || [];
+          
+          // Create weight price items with all the required data
+          // This ensures we have exactly one entry for each weight option
+          const weightPriceItems = weights.map(weight => {
+            // If we have a price for this weight in the saved data, use it
+            const price = pricesObj[weight] ? String(pricesObj[weight]) : product.price;
+            
+            // Set default comparePrice to main product comparePrice
+            const comparePrice = product.comparePrice || "";
+            
+            return {
+              weight,
+              price,
+              comparePrice
+            };
+          });
+          
           setWeightPrices(weightPriceItems);
+          console.log("Loaded weight prices:", weightPriceItems);
         } catch (e) {
           console.error("Error parsing weight prices:", e);
           setWeightPrices([]);
         }
       } else {
-        setWeightPrices([]);
+        // Create default weight prices based on weight options if they exist
+        if (product.weightOptions && product.weightOptions.length > 0) {
+          const defaultPrices = product.weightOptions.map(weight => ({
+            weight,
+            price: product.price,
+            comparePrice: product.comparePrice || ""
+          }));
+          setWeightPrices(defaultPrices);
+        } else {
+          setWeightPrices([]);
+        }
       }
       
       // Map API data to form values
@@ -308,16 +336,22 @@ export default function ProductForm() {
       if (data.weightOptions && data.weightOptions.length > 0) {
         // Create weight prices object based on current weight options only
         console.log("Synchronizing weight prices with current weight options");
-        const pricesObj: Record<string, string> = {};
+        const pricesObj: Record<string, {price: string, comparePrice?: string}> = {};
         
         data.weightOptions.forEach(option => {
           // Find price for this weight option if it exists in our state
           const weightPrice = weightPrices.find(wp => wp.weight === option);
           if (weightPrice && weightPrice.price) {
-            pricesObj[option] = weightPrice.price;
+            pricesObj[option] = {
+              price: weightPrice.price,
+              comparePrice: weightPrice.comparePrice
+            };
           } else {
             // Use default price if no specific price set
-            pricesObj[option] = data.price || "0";
+            pricesObj[option] = {
+              price: data.price || "0",
+              comparePrice: data.comparePrice
+            };
           }
         });
         
@@ -980,13 +1014,16 @@ export default function ProductForm() {
                                 {form.watch("weightOptions")?.map((option: string, index: number) => {
                                   // Find the price for this weight option if it exists
                                   const weightPrice = weightPrices.find(wp => wp.weight === option);
-                                  const comparePrice = form.watch("comparePrice");
-                                  const hasDiscount = comparePrice && weightPrice?.price;
+                                  const defaultComparePrice = form.watch("comparePrice");
+                                  
+                                  // Use the weight-specific compare price if available, otherwise use the default
+                                  const weightComparePrice = weightPrice?.comparePrice || defaultComparePrice;
+                                  const hasDiscount = weightComparePrice && weightPrice?.price;
                                   
                                   // Calculate discount percentage if both prices exist
                                   let discountPercentage = 0;
-                                  if (hasDiscount && parseFloat(comparePrice) > 0 && parseFloat(weightPrice?.price || "0") > 0) {
-                                    discountPercentage = Math.round((1 - (parseFloat(weightPrice?.price || "0") / parseFloat(comparePrice))) * 100);
+                                  if (hasDiscount && parseFloat(weightComparePrice) > 0 && parseFloat(weightPrice?.price || "0") > 0) {
+                                    discountPercentage = Math.round((1 - (parseFloat(weightPrice?.price || "0") / parseFloat(weightComparePrice))) * 100);
                                   }
                                   
                                   return (
@@ -1026,15 +1063,40 @@ export default function ProductForm() {
                                             />
                                           </div>
                                           
-                                          {/* Comparison price display */}
-                                          {comparePrice && (
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-gray-500 line-through text-sm">₹{comparePrice}</span>
-                                              {discountPercentage > 0 && (
-                                                <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
-                                                  {discountPercentage}% off
-                                                </span>
-                                              )}
+                                          {/* Comparison price input */}
+                                          <div className="relative flex-1">
+                                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                                            <Input
+                                              placeholder="Compare-at price"
+                                              className="pl-8"
+                                              value={weightPrice?.comparePrice || ""}
+                                              onChange={(e) => {
+                                                const updatedPrices = [...weightPrices];
+                                                const existingIndex = updatedPrices.findIndex(wp => wp.weight === option);
+                                                
+                                                if (existingIndex >= 0) {
+                                                  updatedPrices[existingIndex].comparePrice = e.target.value;
+                                                } else {
+                                                  updatedPrices.push({
+                                                    weight: option,
+                                                    price: "",
+                                                    comparePrice: e.target.value
+                                                  });
+                                                }
+                                                
+                                                setWeightPrices(updatedPrices);
+                                                // Reset saved status when changes are made
+                                                setWeightPricesSaved(false);
+                                              }}
+                                            />
+                                          </div>
+                                          
+                                          {/* Discount percentage display */}
+                                          {discountPercentage > 0 && (
+                                            <div className="flex items-center">
+                                              <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                                                {discountPercentage}% off
+                                              </span>
                                             </div>
                                           )}
                                         </div>
@@ -1078,10 +1140,13 @@ export default function ProductForm() {
                                       // Save weight prices directly to the database via API
                                       if (weightPrices.length > 0 && productId) {
                                         try {
-                                          // Convert to object format
-                                          const pricesObj: Record<string, string> = {};
+                                          // Convert to object format with both price and comparePrice
+                                          const pricesObj: Record<string, {price: string, comparePrice?: string}> = {};
                                           weightPrices.forEach(item => {
-                                            pricesObj[item.weight] = item.price;
+                                            pricesObj[item.weight] = {
+                                              price: item.price,
+                                              comparePrice: item.comparePrice
+                                            };
                                           });
                                           
                                           // Convert to JSON string for the API
