@@ -15,6 +15,12 @@
   .hero-gradient {
     background: linear-gradient(135deg, #ffd700 0%, #90EE90 100%);
   }
+  
+  @media (min-width: 768px) {
+    .hero-gradient {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.85) 0%, rgba(144, 238, 144, 0.85) 100%);
+    }
+  }
 
   .contact-hero-gradient {
     background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);

@@ -24,9 +24,9 @@ export default function Home() {
   return (
     <>
       {/* Hero Section */}
-      <section id="home" className="hero-gradient min-h-screen flex items-center pt-16 md:pt-24">
-        <div className="container mx-auto px-4 md:px-6 py-12 md:py-24">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+      <section id="home" className="hero-gradient min-h-[90vh] md:min-h-[80vh] flex items-center pt-16 md:pt-20">
+        <div className="container mx-auto px-4 md:px-16 lg:px-24 py-12 md:py-16">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center max-w-7xl mx-auto">
             <motion.div 
               className="text-left order-2 md:order-1 mt-6 md:mt-0"
               initial={{ opacity: 0, x: -50 }}
@@ -34,7 +34,7 @@ export default function Home() {
               transition={{ duration: 0.8, ease: "easeOut" }}
             >
               <motion.h1 
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-green-800 mb-4 md:mb-6 text-shadow"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-bold text-green-800 mb-4 md:mb-6 text-shadow"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.8 }}
@@ -42,7 +42,7 @@ export default function Home() {
                 {t('home')} {t('footer.tagline')}
               </motion.h1>
               <motion.p 
-                className="text-base md:text-lg lg:text-xl text-gray-700 mb-6 md:mb-8"
+                className="text-base md:text-lg text-gray-700 mb-6 md:mb-8 max-w-lg"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4, duration: 0.8 }}
@@ -68,7 +68,7 @@ export default function Home() {
               </motion.div>
             </motion.div>
             <motion.div 
-              className="relative order-1 md:order-2"
+              className="relative order-1 md:order-2 mx-auto md:ml-auto md:mr-0 max-w-md md:max-w-sm lg:max-w-md"
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
@@ -76,7 +76,7 @@ export default function Home() {
               <motion.img 
                 src="https://images.pexels.com/photos/7511774/pexels-photo-7511774.jpeg" 
                 alt="Millet grains" 
-                className="rounded-2xl shadow-2xl w-full"
+                className="rounded-2xl shadow-2xl w-full h-auto object-cover"
                 initial={{ scale: 0.9 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.5 }}

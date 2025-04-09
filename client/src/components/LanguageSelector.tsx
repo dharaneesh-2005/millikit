@@ -9,10 +9,6 @@ export default function LanguageSelector() {
     setLanguage(language === "en" ? "ta" : "en");
   };
 
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown);
-  };
-
   return (
     <>
       {/* Desktop language selector */}
@@ -28,13 +24,14 @@ export default function LanguageSelector() {
       </div>
 
       {/* Mobile language toggle */}
-      <div className="md:hidden absolute top-4 left-20 z-50">
+      <div className="md:hidden absolute top-4 right-20 z-50">
         <button 
-          onClick={toggleLanguage} 
-          className="bg-white shadow-md rounded-full p-2 flex items-center justify-center"
+          onClick={toggleLanguage}
+          className="text-gray-700 hover:text-green-600 transition-colors"
           aria-label="Toggle language"
         >
-          <span className="text-sm font-medium text-green-700">
+          <i className="fas fa-globe text-xl"></i>
+          <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full text-[10px]">
             {language === "en" ? "EN" : "TA"}
           </span>
         </button>

@@ -44,24 +44,24 @@ export default function Header() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <nav className="container mx-auto px-6 py-4">
+      <nav className="container mx-auto px-4 md:px-8 py-4">
         <div className="flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center">
               <motion.img 
                 src={logoPath} 
                 alt="Millikit Logo" 
-                className="h-14 w-auto mr-2" 
+                className="h-10 md:h-14 w-auto" 
                 whileHover={{ rotate: [0, -5, 5, -5, 0], transition: { duration: 0.5 } }}
               />
             </Link>
           </motion.div>
           
-          <div className="hidden md:flex space-x-8">
+          <div className="hidden md:flex space-x-10">
             {['/', '/products', '/contact'].map((path, index) => (
               <motion.div
                 key={path}
@@ -71,7 +71,7 @@ export default function Header() {
               >
                 <Link 
                   href={path === '/' ? path : path.substring(1)}
-                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600' : 'text-gray-700 hover:text-green-600'} transition-colors`}
+                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-medium' : 'text-gray-700 hover:text-green-600'} transition-colors`}
                 >
                   {path === '/' ? t('home') : path === '/products' ? t('products') : t('contact')}
                 </Link>
@@ -79,10 +79,9 @@ export default function Header() {
             ))}
           </div>
           
-          <div className="flex items-center space-x-4">
-            {/* Admin login link - hidden on mobile */}
+          <div className="flex items-center space-x-5">
+            {/* Admin login link - visible on both mobile and desktop */}
             <motion.div
-              className="hidden md:block"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
