@@ -237,32 +237,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Instead of just checking by product ID, now we need to also check the metaData
       // to differentiate between different weight options of the same product
       
-      // Check for an existing item with same product and same metaData (weight option)
-      const existingItems = await storage.getCartItems(sessionId);
-      let existingItemWithSameWeight = null;
-      
-      for (const item of existingItems) {
-        if (item.productId === validatedData.productId) {
-          // Check if metaData (weight options) match
-          if (
-            (item.metaData === null && validatedData.metaData === null) ||
-            (item.metaData === validatedData.metaData) ||
-            (item.metaData && validatedData.metaData && 
-             item.metaData.toString() === validatedData.metaData.toString())
-          ) {
-            existingItemWithSameWeight = item;
-            break;
+      try {
+        // Try to use the new method that handles metaData properly
+        const existingItemWithSameWeight = await storage.getCartItemWithProduct(
+          sessionId, 
+          validatedData.productId,
+          validatedData.metaData || null
+        );
+        
+        if (existingItemWithSameWeight) {
+          // Update quantity if item with same weight already exists
+          console.log(`Found existing cart item with same weight, updating quantity from ${existingItemWithSameWeight.quantity} to ${existingItemWithSameWeight.quantity + (validatedData.quantity || 1)}`);
+          const updatedItem = await storage.updateCartItem(
+            existingItemWithSameWeight.id,
+            existingItemWithSameWeight.quantity + (validatedData.quantity || 1)
+          );
+          return res.json(updatedItem);
+        }
+      } catch (error) {
+        console.error("Error finding cart item with same weight:", error);
+        
+        // Fallback to old method if the new one fails
+        const existingItems = await storage.getCartItems(sessionId);
+        let existingItemWithSameWeight = null;
+        
+        for (const item of existingItems) {
+          if (item.productId === validatedData.productId) {
+            // Check if metaData (weight options) match
+            if (
+              (item.metaData === null && validatedData.metaData === null) ||
+              (item.metaData === validatedData.metaData) ||
+              (item.metaData && validatedData.metaData && 
+               item.metaData.toString() === validatedData.metaData.toString())
+            ) {
+              existingItemWithSameWeight = item;
+              break;
+            }
           }
         }
-      }
-      
-      if (existingItemWithSameWeight) {
-        // Update quantity if item with same weight already exists
-        const updatedItem = await storage.updateCartItem(
-          existingItemWithSameWeight.id,
-          existingItemWithSameWeight.quantity + (validatedData.quantity || 1)
-        );
-        return res.json(updatedItem);
+        
+        if (existingItemWithSameWeight) {
+          // Update quantity if item with same weight already exists
+          const updatedItem = await storage.updateCartItem(
+            existingItemWithSameWeight.id,
+            existingItemWithSameWeight.quantity + (validatedData.quantity || 1)
+          );
+          return res.json(updatedItem);
+        }
       }
       
       // If no matching item (same product + same weight) found, add as new item

@@ -309,19 +309,102 @@ export class PostgreSQLStorage implements IStorage {
     });
   }
 
-  async getCartItemWithProduct(sessionId: string, productId: number): Promise<CartItem | undefined> {
+  async getCartItemWithProduct(sessionId: string, productId: number, metaDataValue?: string): Promise<CartItem | undefined> {
     return this.executeWithRetry(async () => {
-      const results = await this.db
-        .select()
-        .from(cartItems)
-        .where(
-          and(
-            eq(cartItems.sessionId, sessionId),
-            eq(cartItems.productId, productId)
-          )
-        );
-      
-      return results.length > 0 ? results[0] : undefined;
+      try {
+        // First, check if the meta_data column exists
+        const hasMetaData = await this.checkIfColumnExists('cart_items', 'meta_data');
+        
+        // If metaData is being used but the column doesn't exist in the database
+        if (!hasMetaData && metaDataValue) {
+          console.log('Meta_data column not found, cannot filter by metaData. Fallback to basic query.');
+          // Without metaData, we just get all items for this product
+          const results = await this.db
+            .select()
+            .from(cartItems)
+            .where(
+              and(
+                eq(cartItems.sessionId, sessionId),
+                eq(cartItems.productId, productId)
+              )
+            );
+          
+          return results.length > 0 ? results[0] : undefined;
+        }
+        
+        // If metaData filtering is requested and the column exists
+        if (hasMetaData && metaDataValue) {
+          try {
+            const results = await this.db
+              .select()
+              .from(cartItems)
+              .where(
+                and(
+                  eq(cartItems.sessionId, sessionId),
+                  eq(cartItems.productId, productId),
+                  eq(cartItems.metaData, metaDataValue)
+                )
+              );
+            
+            return results.length > 0 ? results[0] : undefined;
+          } catch (error) {
+            console.error('Error querying cart with metaData filter:', error);
+            // Fallback to query without metaData if there's an error
+            const results = await this.db
+              .select()
+              .from(cartItems)
+              .where(
+                and(
+                  eq(cartItems.sessionId, sessionId),
+                  eq(cartItems.productId, productId)
+                )
+              );
+            
+            return results.length > 0 ? results[0] : undefined;
+          }
+        }
+        
+        // Standard query without metaData filtering
+        const results = await this.db
+          .select()
+          .from(cartItems)
+          .where(
+            and(
+              eq(cartItems.sessionId, sessionId),
+              eq(cartItems.productId, productId)
+            )
+          );
+        
+        return results.length > 0 ? results[0] : undefined;
+      } catch (error) {
+        console.error('Error in getCartItemWithProduct:', error);
+        // Last resort fallback - use raw SQL without meta_data
+        try {
+          const result = await this.client.query(`
+            SELECT id, user_id, session_id, product_id, quantity, created_at
+            FROM cart_items
+            WHERE session_id = $1 AND product_id = $2
+            LIMIT 1
+          `, [sessionId, productId]);
+          
+          if (result.length > 0) {
+            // Transform raw result to match CartItem structure
+            return {
+              id: result[0].id,
+              userId: result[0].user_id,
+              sessionId: result[0].session_id,
+              productId: result[0].product_id,
+              quantity: result[0].quantity,
+              createdAt: result[0].created_at,
+              metaData: null // No metaData available
+            };
+          }
+          return undefined;
+        } catch (fallbackError) {
+          console.error('Even fallback query failed:', fallbackError);
+          return undefined;
+        }
+      }
     });
   }
 
