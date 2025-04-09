@@ -39,7 +39,7 @@ export default function AdminLogin() {
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "admin_millikit",
+      username: "admin", // Default admin username
       password: "",
     },
   });
@@ -50,7 +50,15 @@ export default function AdminLogin() {
     setIsLoggingIn(true);
     
     try {
-      const response = await apiRequest("POST", "/api/admin/login", data);
+      // Use fetch directly with proper headers
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      
       const result = await response.json();
       
       if (result.success) {
