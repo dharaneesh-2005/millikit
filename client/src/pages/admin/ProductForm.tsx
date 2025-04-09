@@ -50,7 +50,8 @@ import {
   ImageIcon,
   Weight,
   Utensils, 
-  Leaf
+  Leaf,
+  Save
 } from "lucide-react";
 import { insertProductSchema, type Product } from "@shared/schema";
 import { z } from "zod";
@@ -946,79 +947,113 @@ export default function ProductForm() {
                     <div className="mt-4 space-y-4">
                       <div className="flex justify-between items-center">
                         <h3 className="text-md font-medium">Weight-Specific Prices</h3>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            const options = form.getValues("weightOptions") || [];
-                            if (options.length === 0) {
-                              toast({
-                                title: "No weight options",
-                                description: "Please add weight options first",
-                                variant: "destructive"
-                              });
-                              return;
-                            }
-                            
-                            // Add prices for any weight options that don't have prices yet
-                            const newWeightPrices = [...weightPrices];
-                            options.forEach(option => {
-                              if (!newWeightPrices.some(wp => wp.weight === option)) {
-                                newWeightPrices.push({
-                                  weight: option,
-                                  price: form.getValues("price") || ""
+                        <div className="flex space-x-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              const options = form.getValues("weightOptions") || [];
+                              if (options.length === 0) {
+                                toast({
+                                  title: "No weight options",
+                                  description: "Please add weight options first",
+                                  variant: "destructive"
                                 });
+                                return;
                               }
-                            });
-                            setWeightPrices(newWeightPrices);
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Update Prices
-                        </Button>
+                              
+                              // Add prices for any weight options that don't have prices yet
+                              const newWeightPrices = [...weightPrices];
+                              options.forEach(option => {
+                                if (!newWeightPrices.some(wp => wp.weight === option)) {
+                                  newWeightPrices.push({
+                                    weight: option,
+                                    price: form.getValues("price") || ""
+                                  });
+                                }
+                              });
+                              setWeightPrices(newWeightPrices);
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Update Prices
+                          </Button>
+                        </div>
                       </div>
                       
                       {weightPrices.length > 0 ? (
-                        <div className="rounded-md border">
-                          <div className="grid grid-cols-12 bg-gray-50 p-2 rounded-t-md">
-                            <div className="col-span-5 font-medium">Weight</div>
-                            <div className="col-span-5 font-medium">Price (₹)</div>
-                            <div className="col-span-2"></div>
+                        <div className="space-y-4">
+                          <div className="rounded-md border">
+                            <div className="grid grid-cols-12 bg-gray-50 p-2 rounded-t-md">
+                              <div className="col-span-5 font-medium">Weight</div>
+                              <div className="col-span-5 font-medium">Price (₹)</div>
+                              <div className="col-span-2"></div>
+                            </div>
+                            <div className="divide-y">
+                              {weightPrices.map((item, index) => (
+                                <div key={index} className="grid grid-cols-12 p-2 items-center">
+                                  <div className="col-span-5">{item.weight}</div>
+                                  <div className="col-span-5">
+                                    <Input
+                                      type="text"
+                                      value={item.price}
+                                      onChange={(e) => {
+                                        const newWeightPrices = [...weightPrices];
+                                        newWeightPrices[index].price = e.target.value;
+                                        setWeightPrices(newWeightPrices);
+                                      }}
+                                      className="h-8"
+                                      placeholder="Price"
+                                    />
+                                  </div>
+                                  <div className="col-span-2 flex justify-end">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        const newWeightPrices = [...weightPrices];
+                                        newWeightPrices.splice(index, 1);
+                                        setWeightPrices(newWeightPrices);
+                                      }}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <div className="divide-y">
-                            {weightPrices.map((item, index) => (
-                              <div key={index} className="grid grid-cols-12 p-2 items-center">
-                                <div className="col-span-5">{item.weight}</div>
-                                <div className="col-span-5">
-                                  <Input
-                                    type="text"
-                                    value={item.price}
-                                    onChange={(e) => {
-                                      const newWeightPrices = [...weightPrices];
-                                      newWeightPrices[index].price = e.target.value;
-                                      setWeightPrices(newWeightPrices);
-                                    }}
-                                    className="h-8"
-                                    placeholder="Price"
-                                  />
-                                </div>
-                                <div className="col-span-2 flex justify-end">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      const newWeightPrices = [...weightPrices];
-                                      newWeightPrices.splice(index, 1);
-                                      setWeightPrices(newWeightPrices);
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                          
+                          <div className="flex justify-end">
+                            <Button 
+                              type="button" 
+                              variant="secondary"
+                              onClick={() => {
+                                // Convert weightPrices array to JSON string and add to form data
+                                if (weightPrices.length > 0) {
+                                  const pricesObj: Record<string, string> = {};
+                                  weightPrices.forEach(item => {
+                                    pricesObj[item.weight] = item.price;
+                                  });
+                                  form.setValue("weightPrices", JSON.stringify(pricesObj));
+                                  
+                                  // Show success message
+                                  toast({
+                                    title: "Weight prices saved",
+                                    description: "Weight-specific prices have been saved to the form. Remember to click 'Update Product' to save to database."
+                                  });
+                                  
+                                  // Log to console for debugging
+                                  console.log("Weight prices saved to form:", pricesObj);
+                                  console.log("Form value:", form.getValues("weightPrices"));
+                                }
+                              }}
+                            >
+                              <Save className="h-4 w-4 mr-2" />
+                              Save Weight Prices
+                            </Button>
                           </div>
                         </div>
                       ) : (
