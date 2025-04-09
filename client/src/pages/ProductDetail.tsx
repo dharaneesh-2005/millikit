@@ -699,18 +699,6 @@ export default function ProductDetail() {
             <div className={`tab-content ${activeTab === "description" ? "active" : ""}`}>
               <div className="space-y-4">
                 <p className="text-gray-700">{product.description}</p>
-                
-                <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Benefits:</h3>
-                <ul className="list-disc pl-6 space-y-2 text-gray-700">
-                  <li>High in dietary fiber, helping with digestion and promoting a feeling of fullness</li>
-                  <li>Rich in essential minerals including iron, calcium, and zinc</li>
-                  <li>Contains antioxidants that fight free radicals and reduce oxidative stress</li>
-                  <li>Good source of protein, making it an excellent grain choice for vegetarians</li>
-                  <li>Gluten-free and suitable for those with celiac disease or gluten sensitivity</li>
-                </ul>
-                
-                <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Storage:</h3>
-                <p className="text-gray-700">Store in a cool, dry place in an airtight container. For extended shelf life, refrigeration is recommended. Once opened, consume within 3-4 months for optimal taste and nutritional value.</p>
               </div>
             </div>
             

@@ -701,30 +701,77 @@ export default function ProductForm() {
                       <FormField
                         control={form.control}
                         name="imageGallery"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Additional Images (One per line)</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" 
-                                className="min-h-24" 
-                                value={(field.value || []).join("\n")}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  const images = value
-                                    .split("\n")
-                                    .map(url => url.trim())
-                                    .filter(url => url !== "");
-                                  field.onChange(images);
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Enter each image URL on a new line
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const [newImageUrl, setNewImageUrl] = useState("");
+                          
+                          const addImageUrl = () => {
+                            if (newImageUrl.trim() !== "") {
+                              const updatedGallery = [...(field.value || []), newImageUrl.trim()];
+                              field.onChange(updatedGallery);
+                              setNewImageUrl("");
+                            }
+                          };
+                          
+                          const removeImage = (index: number) => {
+                            const updatedGallery = [...(field.value || [])];
+                            updatedGallery.splice(index, 1);
+                            field.onChange(updatedGallery);
+                          };
+                          
+                          return (
+                            <FormItem>
+                              <FormLabel>Image Gallery</FormLabel>
+                              <div className="space-y-4">
+                                <div className="flex space-x-2">
+                                  <Input
+                                    placeholder="Enter image URL"
+                                    value={newImageUrl}
+                                    onChange={(e) => setNewImageUrl(e.target.value)}
+                                    className="flex-1"
+                                  />
+                                  <Button 
+                                    type="button"
+                                    onClick={addImageUrl}
+                                    variant="outline"
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Image
+                                  </Button>
+                                </div>
+                                
+                                {(field.value || []).length > 0 ? (
+                                  <div className="space-y-2 p-4 border rounded-md">
+                                    {(field.value || []).map((url, index) => (
+                                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                        <div className="flex items-center space-x-2 overflow-hidden">
+                                          <ImageIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                          <span className="text-sm truncate">{url}</span>
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeImage(index)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center p-4 border border-dashed rounded-md">
+                                    <p className="text-sm text-gray-500">No gallery images added yet</p>
+                                  </div>
+                                )}
+                              </div>
+                              <FormDescription>
+                                Add multiple images to display in the product gallery
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                       
                       <FormField
