@@ -293,7 +293,9 @@ export class PostgreSQLStorage implements IStorage {
   async getCartItemWithProduct(sessionId: string, productId: number, metaDataValue?: string): Promise<CartItem | undefined> {
     return this.executeWithRetry(async () => {
       try {
-        // First try using drizzle
+        console.log(`Searching for cart item with sessionId: ${sessionId}, productId: ${productId}, metaData: ${metaDataValue || 'none'}`);
+        
+        // Get all items that match the sessionId and productId
         const results = await this.db
           .select()
           .from(cartItems)
@@ -303,6 +305,8 @@ export class PostgreSQLStorage implements IStorage {
               eq(cartItems.productId, productId)
             )
           );
+          
+        console.log(`Found ${results.length} items with matching sessionId and productId`);
           
         // If metaData is provided, we need to match on that too
         if (results.length > 0 && metaDataValue) {
@@ -319,13 +323,17 @@ export class PostgreSQLStorage implements IStorage {
               
               // Parse the metaData for more sophisticated matching
               if (item.metaData && metaDataValue) {
-                const itemMeta = JSON.parse(item.metaData);
-                const valueMeta = JSON.parse(metaDataValue);
-                
-                // Check if the selectedWeight values match
-                if (itemMeta.selectedWeight === valueMeta.selectedWeight) {
-                  console.log(`Found matching item with parsed metaData. Weight: ${itemMeta.selectedWeight}`);
-                  return item;
+                try {
+                  const itemMeta = JSON.parse(item.metaData);
+                  const valueMeta = JSON.parse(metaDataValue);
+                  
+                  // Check if the selectedWeight values match
+                  if (itemMeta.selectedWeight === valueMeta.selectedWeight) {
+                    console.log(`Found matching item with parsed metaData. Weight: ${itemMeta.selectedWeight}`);
+                    return item;
+                  }
+                } catch (parseError) {
+                  console.error('Error parsing metaData JSON:', parseError);
                 }
               }
             } catch (e) {
@@ -342,38 +350,7 @@ export class PostgreSQLStorage implements IStorage {
         return results.length > 0 ? results[0] : undefined;
       } catch (error) {
         console.error('Error in getCartItemWithProduct:', error);
-        
-        // Try a direct SQL approach as a fallback
-        try {
-          let query = 'SELECT * FROM cart_items WHERE session_id = $1 AND product_id = $2';
-          const params = [sessionId, productId];
-          
-          // Add metaData condition if it exists
-          if (metaDataValue) {
-            // Try both equality and JSON comparison
-            query = `
-              SELECT * FROM cart_items 
-              WHERE session_id = $1 
-              AND product_id = $2 
-              AND (meta_data = $3 OR meta_data::text LIKE $4)
-            `;
-            // Add % for LIKE comparison to allow partial matches
-            const metaSearch = `%${JSON.parse(metaDataValue).selectedWeight}%`;
-            params.push(metaDataValue, metaSearch);
-          }
-          
-          const result = await this.client.query(query, params);
-          
-          if (result.rows.length > 0) {
-            console.log('Found cart item using SQL fallback');
-            return this.mapCartItem(result.rows[0]);
-          }
-          
-          return undefined;
-        } catch (sqlError) {
-          console.error('SQL fallback also failed:', sqlError);
-          return undefined;
-        }
+        return undefined;
       }
     });
   }
@@ -381,50 +358,62 @@ export class PostgreSQLStorage implements IStorage {
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
     return this.executeWithRetry(async () => {
       try {
-        // First attempt to insert with metaData
+        console.log('Adding cart item to database:', cartItem);
+        
+        // Set metaData to null if it's undefined to ensure it's stored correctly
+        const itemToInsert = {
+          ...cartItem,
+          metaData: cartItem.metaData || null
+        };
+        
+        // Insert the cart item with metaData included
         try {
-          console.log('Attempting to add cart item with metaData:', cartItem);
-          const newCartItem = await this.db.insert(cartItems).values(cartItem).returning();
+          const newCartItem = await this.db.insert(cartItems).values(itemToInsert).returning();
+          console.log('Successfully added cart item with metaData:', newCartItem[0]);
           return newCartItem[0];
-        } catch (metaDataError) {
-          console.error('Error adding to cart with metaData:', metaDataError);
+        } catch (insertError) {
+          console.error('Error adding to cart with standard insert:', insertError);
           
-          // If that fails, try without metaData
-          const { metaData, ...cartItemWithoutMeta } = cartItem;
-          console.log('Falling back: Adding cart item without metaData:', cartItemWithoutMeta);
-          
-          // Insert the cart item without metaData
-          const newCartItem = await this.db.insert(cartItems).values(cartItemWithoutMeta).returning();
-          
-          // Try to update the metaData directly using SQL
+          // If Drizzle insert fails, try the fallback method of using SQL manually
           try {
-            if (metaData) {
-              console.log('Attempting to update metaData using direct SQL');
-              const updatedId = newCartItem[0].id;
-              await this.client.query(
-                'UPDATE cart_items SET meta_data = $1 WHERE id = $2',
-                [metaData, updatedId]
-              );
-              
-              // Get the updated item
-              const updated = await this.client.query(
-                'SELECT * FROM cart_items WHERE id = $1',
-                [updatedId]
-              );
-              
-              if (updated.rows.length > 0) {
-                return this.mapCartItem(updated.rows[0]);
+            // First insert without metadata
+            const { metaData, ...cartItemWithoutMeta } = cartItem;
+            console.log('Falling back: adding cart item without metaData');
+            
+            const baseInsert = await this.db.insert(cartItems).values(cartItemWithoutMeta).returning();
+            const insertedId = baseInsert[0].id;
+            
+            console.log('Successfully inserted base item with ID:', insertedId);
+            
+            // If we have metaData, do a separate update with the raw client
+            if (cartItem.metaData) {
+              try {
+                console.log('Attempting separate update for metaData');
+                // Use the db update method from drizzle instead of raw query
+                await this.db.update(cartItems)
+                  .set({ metaData: cartItem.metaData })
+                  .where(eq(cartItems.id, insertedId));
+                
+                console.log('Successfully updated metaData');
+              } catch (metaUpdateError) {
+                console.error('Failed to update metaData:', metaUpdateError);
               }
             }
-          } catch (updateError) {
-            console.error('Failed to update metaData using SQL:', updateError);
+            
+            // Get the updated record
+            const updatedResult = await this.db.select().from(cartItems).where(eq(cartItems.id, insertedId));
+            
+            if (updatedResult.length > 0) {
+              console.log('Returning updated cart item:', updatedResult[0]);
+              return updatedResult[0];
+            } else {
+              console.log('Returning base item (could not fetch updated):', baseInsert[0]);
+              return baseInsert[0];
+            }
+          } catch (fallbackError) {
+            console.error('Complete fallback failure:', fallbackError);
+            throw fallbackError;
           }
-          
-          // Return the original result if we couldn't update metaData
-          return { 
-            ...newCartItem[0],
-            metaData: null
-          };
         }
       } catch (error) {
         console.error('Error adding to cart:', error);

@@ -129,6 +129,7 @@ export default function Cart() {
                           const metadata = JSON.parse(item.metaData);
                           if (metadata && metadata.selectedWeight) {
                             selectedWeight = metadata.selectedWeight;
+                            console.log(`Found selectedWeight in metaData: ${selectedWeight} for item ${item.id}`);
                           }
                         }
                       } catch (error) {
