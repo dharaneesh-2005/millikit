@@ -1065,40 +1065,50 @@ export default function ProductForm() {
                                 </div>
                               )}
                             </div>
+                            
+                            {/* Using a div with onClick instead of a button to avoid form submission issues */}
                             <div className="flex justify-end">
-                              <Button 
-                                type="button" 
-                                variant="default"
-                                onClick={(e) => {
-                                  // Prevent the default form submission
-                                  e.preventDefault();
-                                  
+                              <div
+                                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors 
+                                  focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none 
+                                  disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 
+                                  bg-green-700 hover:bg-green-600 text-white cursor-pointer"
+                                onClick={() => {
                                   // Convert weightPrices array to JSON string and add to form data
                                   if (weightPrices.length > 0) {
-                                    const pricesObj: Record<string, string> = {};
-                                    weightPrices.forEach(item => {
-                                      pricesObj[item.weight] = item.price;
-                                    });
-                                    form.setValue("weightPrices", JSON.stringify(pricesObj));
-                                    
-                                    // Set saved state to true to show visual indicator
-                                    setWeightPricesSaved(true);
-                                    
-                                    // Show success message
-                                    toast({
-                                      title: "Weight prices saved to form",
-                                      description: "Remember to click 'Update Product' at the bottom to save to database."
-                                    });
-                                    
-                                    // Log to console for debugging
-                                    console.log("Weight prices saved to form:", pricesObj);
-                                    console.log("Form value:", form.getValues("weightPrices"));
+                                    try {
+                                      const pricesObj: Record<string, string> = {};
+                                      weightPrices.forEach(item => {
+                                        pricesObj[item.weight] = item.price;
+                                      });
+                                      form.setValue("weightPrices", JSON.stringify(pricesObj));
+                                      
+                                      // Set saved state to true to show visual indicator
+                                      setWeightPricesSaved(true);
+                                      
+                                      // Show success message
+                                      toast({
+                                        title: "Weight prices saved to form",
+                                        description: "Remember to click 'Update Product' at the bottom to save to database."
+                                      });
+                                      
+                                      // Log to console for debugging
+                                      console.log("Weight prices saved to form:", pricesObj);
+                                      console.log("Form value:", form.getValues("weightPrices"));
+                                    } catch (error) {
+                                      console.error("Error saving weight prices:", error);
+                                      toast({
+                                        title: "Error saving prices",
+                                        description: "Something went wrong while saving prices.",
+                                        variant: "destructive"
+                                      });
+                                    }
                                   }
                                 }}
                               >
                                 <Save className="h-4 w-4 mr-2" />
                                 Save Weight Prices
-                              </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
