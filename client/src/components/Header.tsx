@@ -45,7 +45,7 @@ export default function Header() {
       transition={{ duration: 0.5 }}
     >
       <nav className="container mx-auto px-4 md:px-12 lg:px-16 py-4 md:py-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between relative">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
