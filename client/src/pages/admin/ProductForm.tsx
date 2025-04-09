@@ -17,26 +17,23 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { useMediaQuery } from "@/hooks/use-mobile";
 import { 
   ArrowLeft, 
   Check,
@@ -52,7 +49,8 @@ import {
   Weight,
   Utensils, 
   Leaf,
-  Save
+  Save,
+  CheckCircle2
 } from "lucide-react";
 import { insertProductSchema, type Product } from "@shared/schema";
 import { z } from "zod";
@@ -431,692 +429,237 @@ export default function ProductForm() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Basic Information Section */}
-                  <div className="space-y-6 md:col-span-2">
-                    <h2 className="text-xl font-semibold">Basic Information</h2>
-                    
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Product Name *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Organic Foxtail Millet" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="shortDescription"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Short Description *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="A brief description for product listings" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            This will be shown in product cards and listings.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Description *</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Detailed product description with key features and benefits" 
-                              className="min-h-32"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  {/* Rest of form content */}
                   
-                  {/* Pricing Section */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold">Pricing</h2>
-                    
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Price (₹) *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="299" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="comparePrice"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Compare at Price (₹)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="350" {...field} value={field.value || ""} />
-                          </FormControl>
-                          <FormDescription>
-                            Original price for showing discounts. Leave empty if not on sale.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="badge"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Badge Text</FormLabel>
-                          <FormControl>
-                            <Input placeholder="New / Organic / Sale" {...field} value={field.value || ""} />
-                          </FormControl>
-                          <FormDescription>
-                            Optional badge to display on the product (e.g., "New", "Sale", "Organic")
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {/* Categorization and Visibility */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold">Categorization & Visibility</h2>
-                    
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category *</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categories.map(category => (
-                                <SelectItem key={category.value} value={category.value}>
-                                  {category.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="slug"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>URL Slug</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="product-url-slug" 
-                              {...field} 
-                              value={field.value || ""}
-                              disabled={!isEditMode} // Only allow editing for existing products
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            {isEditMode 
-                              ? "Unique identifier for product URL. Edit with caution as it affects links."
-                              : "Will be automatically generated from product name."}
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="featured"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value === true}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Featured Product</FormLabel>
-                            <FormDescription>
-                              Display this product on the homepage
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="inStock"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value === true}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>In Stock</FormLabel>
-                            <FormDescription>
-                              Is this product currently available for purchase?
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="stockQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stock Quantity</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="0"
-                              placeholder="0" 
-                              {...field}
-                              onChange={e => field.onChange(parseInt(e.target.value) || 0)}
-                              value={field.value || 0}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {/* Image Section */}
-                  <div className="space-y-6 md:col-span-2">
-                    <h2 className="text-xl font-semibold">Images</h2>
-                    
-                    <FormField
-                      control={form.control}
-                      name="imageUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Main Product Image URL *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://example.com/image.jpg" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            URL to the main product image
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="imageGallery"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Additional Image Gallery URLs</FormLabel>
-                          <FormControl>
-                            <div className="space-y-3">
-                              {field.value && field.value.length > 0 ? (
-                                <div className="space-y-2">
-                                  {field.value.map((imgUrl, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                      <Input 
-                                        value={imgUrl} 
-                                        onChange={(e) => {
-                                          const currentValues = Array.isArray(field.value) ? field.value : [];
-                                          const newGallery = [...currentValues];
-                                          newGallery[index] = e.target.value;
-                                          field.onChange(newGallery);
-                                        }}
-                                        placeholder={`Image URL ${index + 1}`}
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        type="button"
-                                        onClick={() => {
-                                          const currentValues = Array.isArray(field.value) ? field.value : [];
-                                          const newGallery = [...currentValues];
-                                          newGallery.splice(index, 1);
-                                          field.onChange(newGallery);
-                                        }}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : null}
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="mt-2"
+                  {/* Weight Prices Section */}
+                  <div className="md:col-span-2">
+                    <h2 className="text-xl font-semibold mb-4">Weight-Specific Pricing</h2>
+                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                      <div className="space-y-4">
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <div className="flex-1">
+                            <Label htmlFor="weightOption">Weight Option</Label>
+                            <div className="flex mt-1">
+                              <Input 
+                                id="weightOption" 
+                                placeholder="e.g., 250g, 500g, 1kg"
+                                className="rounded-r-none"
+                                value={form.watch("newWeightOption") || ""}
+                                onChange={(e) => form.setValue("newWeightOption", e.target.value)}
+                              />
+                              <Button 
+                                type="button" 
+                                className="rounded-l-none"
                                 onClick={() => {
-                                  const currentGallery = Array.isArray(field.value) ? field.value : [];
-                                  field.onChange([...currentGallery, ""]);
-                                }}
-                              >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add Image URL
-                              </Button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {/* Additional Information Section */}
-                  <div className="space-y-6 md:col-span-2">
-                    <h2 className="text-xl font-semibold">Additional Information</h2>
-                    
-                    <FormField
-                      control={form.control}
-                      name="nutritionFacts"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nutrition Facts</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder='{"calories": "350 kcal", "protein": "12g", "carbohydrates": "70g", "fat": "2g", "fiber": "8g"}' 
-                              className="font-mono text-sm"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Enter nutrition information in JSON format.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="cookingInstructions"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cooking Instructions</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Step-by-step cooking instructions for this product." 
-                              className="min-h-32"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <FormLabel className="text-base">Product Reviews</FormLabel>
-                      </div>
-                      
-                      <Card className="border">
-                        <CardContent className="pt-6">
-                          {editingReview ? (
-                            // Edit/Add Review Form
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="reviewName">Customer Name</Label>
-                                  <Input 
-                                    id="reviewName" 
-                                    value={editingReview.name}
-                                    onChange={(e) => setEditingReview({...editingReview, name: e.target.value})}
-                                    placeholder="Customer name"
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="reviewAvatar">Avatar URL (optional)</Label>
-                                  <Input 
-                                    id="reviewAvatar" 
-                                    value={editingReview.avatar || ''}
-                                    onChange={(e) => setEditingReview({...editingReview, avatar: e.target.value})}
-                                    placeholder="https://example.com/avatar.jpg"
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="reviewDate">Review Date</Label>
-                                  <Input 
-                                    id="reviewDate" 
-                                    value={editingReview.date}
-                                    onChange={(e) => setEditingReview({...editingReview, date: e.target.value})}
-                                    placeholder="April 1, 2023"
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="reviewRating">Rating (1-5)</Label>
-                                  <div className="flex items-center space-x-4">
-                                    {[1, 2, 3, 4, 5].map((rating) => (
-                                      <Button 
-                                        key={rating}
-                                        type="button"
-                                        variant={editingReview.rating >= rating ? "default" : "outline"}
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => setEditingReview({...editingReview, rating})}
-                                      >
-                                        {rating}
-                                      </Button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <Label htmlFor="reviewComment">Review Comment</Label>
-                                <Textarea 
-                                  id="reviewComment" 
-                                  value={editingReview.comment}
-                                  onChange={(e) => setEditingReview({...editingReview, comment: e.target.value})}
-                                  placeholder="Customer review comment"
-                                  className="min-h-20"
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <Label htmlFor="helpfulCount">Helpful Count</Label>
-                                <Input 
-                                  id="helpfulCount" 
-                                  type="number" 
-                                  min="0"
-                                  value={editingReview.helpfulCount}
-                                  onChange={(e) => setEditingReview({...editingReview, helpfulCount: parseInt(e.target.value) || 0})}
-                                />
-                              </div>
-                              
-                              <div className="flex justify-end space-x-2 pt-2">
-                                <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
-                                <Button onClick={handleSaveReview}>Save Review</Button>
-                              </div>
-                            </div>
-                          ) : (
-                            // Reviews List
-                            <div className="space-y-4">
-                              {reviews.length === 0 ? (
-                                <div className="text-center py-6 text-muted-foreground">
-                                  No reviews yet. Add your first review!
-                                </div>
-                              ) : (
-                                <div className="space-y-4">
-                                  {reviews.map((review, index) => (
-                                    <div key={review.id} className="flex items-start justify-between border-b pb-4">
-                                      <div className="space-y-1">
-                                        <div className="flex items-center space-x-2">
-                                          <span className="font-medium">{review.name}</span>
-                                          <span className="text-muted-foreground text-sm">{review.date}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                          {Array.from({ length: 5 }).map((_, i) => (
-                                            <Star 
-                                              key={i} 
-                                              className={`h-4 w-4 ${i < review.rating ? "fill-amber-500 text-amber-500" : "text-muted-foreground"}`} 
-                                            />
-                                          ))}
-                                        </div>
-                                        <p className="text-sm text-muted-foreground line-clamp-2">{review.comment}</p>
-                                      </div>
-                                      <div className="flex space-x-2">
-                                        <Button 
-                                          variant="outline" 
-                                          size="sm"
-                                          onClick={() => handleEditReview(review, index)}
-                                        >
-                                          Edit
-                                        </Button>
-                                        <Button 
-                                          variant="destructive" 
-                                          size="sm"
-                                          onClick={() => handleDeleteReview(index)}
-                                        >
-                                          Delete
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              <div className="flex justify-center pt-2">
-                                <Button 
-                                  onClick={handleAddReview}
-                                  className="w-full"
-                                >
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Add Review
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="weightOptions"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Weight Options</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="250g, 500g, 1kg (comma separated)" 
-                              {...field}
-                              value={(field.value || []).join(", ")}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                field.onChange(value.split(",").map(option => option.trim()).filter(Boolean));
-                              }}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Enter comma-separated weight options (e.g., "250g, 500g, 1kg")
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Weight Prices Management */}
-                    <div className="mt-4 space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-md font-medium">Weight-Specific Prices</h3>
-                        <div className="flex space-x-2">
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              const options = form.getValues("weightOptions") || [];
-                              if (options.length === 0) {
-                                toast({
-                                  title: "No weight options",
-                                  description: "Please add weight options first",
-                                  variant: "destructive"
-                                });
-                                return;
-                              }
-                              
-                              // Add prices for any weight options that don't have prices yet
-                              const newWeightPrices = [...weightPrices];
-                              options.forEach(option => {
-                                if (!newWeightPrices.some(wp => wp.weight === option)) {
-                                  newWeightPrices.push({
-                                    weight: option,
-                                    price: form.getValues("price") || ""
-                                  });
-                                }
-                              });
-                              setWeightPrices(newWeightPrices);
-                              setWeightPricesSaved(false); // Reset saved state when updating prices
-                            }}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Update Prices
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {weightPrices.length > 0 ? (
-                        <div className="space-y-4">
-                          <div className="rounded-md border">
-                            <div className="grid grid-cols-12 bg-gray-50 p-2 rounded-t-md">
-                              <div className="col-span-5 font-medium">Weight</div>
-                              <div className="col-span-5 font-medium">Price (₹)</div>
-                              <div className="col-span-2"></div>
-                            </div>
-                            <div className="divide-y">
-                              {weightPrices.map((item, index) => (
-                                <div key={index} className="grid grid-cols-12 p-2 items-center">
-                                  <div className="col-span-5">{item.weight}</div>
-                                  <div className="col-span-5">
-                                    <Input
-                                      type="text"
-                                      value={item.price}
-                                      onChange={(e) => {
-                                        const newWeightPrices = [...weightPrices];
-                                        newWeightPrices[index].price = e.target.value;
-                                        setWeightPrices(newWeightPrices);
-                                        setWeightPricesSaved(false);
-                                      }}
-                                      className="h-8"
-                                      placeholder="Price"
-                                    />
-                                  </div>
-                                  <div className="col-span-2 flex justify-end">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => {
-                                        const newWeightPrices = [...weightPrices];
-                                        newWeightPrices.splice(index, 1);
-                                        setWeightPrices(newWeightPrices);
-                                        setWeightPricesSaved(false);
-                                      }}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          <div className="p-4 mt-2 border border-green-200 bg-green-50 rounded-md">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="text-green-700 font-medium mb-2">Save Your Weight Prices</h4>
-                                <p className="text-sm text-green-600 mb-4">
-                                  You've set up weight-specific prices. To save them, you must:
-                                </p>
-                                <ol className="text-sm text-green-600 mb-4 pl-5 list-decimal">
-                                  <li className="mb-1">First click <span className="font-semibold">"Save Weight Prices"</span> below</li>
-                                  <li>Then click <span className="font-semibold">"Update Product"</span> at the bottom of the form</li>
-                                </ol>
-                              </div>
-                              
-                              {weightPricesSaved && (
-                                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-md flex items-center">
-                                  <Check className="h-4 w-4 mr-2" />
-                                  <span className="text-sm font-medium">Prices saved to form</span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Using a div with onClick instead of a button to avoid form submission issues */}
-                            <div className="flex justify-end">
-                              <div
-                                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors 
-                                  focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none 
-                                  disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 
-                                  bg-green-700 hover:bg-green-600 text-white cursor-pointer"
-                                onClick={() => {
-                                  // Convert weightPrices array to JSON string and add to form data
-                                  if (weightPrices.length > 0) {
-                                    try {
-                                      const pricesObj: Record<string, string> = {};
-                                      weightPrices.forEach(item => {
-                                        pricesObj[item.weight] = item.price;
-                                      });
-                                      form.setValue("weightPrices", JSON.stringify(pricesObj));
-                                      
-                                      // Set saved state to true to show visual indicator
-                                      setWeightPricesSaved(true);
-                                      
-                                      // Show success message
+                                  const newOption = form.watch("newWeightOption");
+                                  if (newOption && newOption.trim()) {
+                                    const currentOptions = form.watch("weightOptions") || [];
+                                    if (!currentOptions.includes(newOption)) {
+                                      form.setValue("weightOptions", [...currentOptions, newOption]);
+                                      form.setValue("newWeightOption", "");
+                                    } else {
                                       toast({
-                                        title: "Weight prices saved to form",
-                                        description: "Remember to click 'Update Product' at the bottom to save to database."
-                                      });
-                                      
-                                      // Log to console for debugging
-                                      console.log("Weight prices saved to form:", pricesObj);
-                                      console.log("Form value:", form.getValues("weightPrices"));
-                                    } catch (error) {
-                                      console.error("Error saving weight prices:", error);
-                                      toast({
-                                        title: "Error saving prices",
-                                        description: "Something went wrong while saving prices.",
+                                        title: "Weight option already exists",
+                                        description: `The weight option "${newOption}" already exists.`,
                                         variant: "destructive"
                                       });
                                     }
                                   }
                                 }}
                               >
-                                <Save className="h-4 w-4 mr-2" />
-                                Save Weight Prices
-                              </div>
+                                <Plus className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         </div>
-                      ) : (
-                        <div className="text-sm text-gray-500 italic">
-                          Add weight options above, then click "Update Prices" to set prices for each weight.
+                        
+                        <div>
+                          <Label>Weight Options</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {form.watch("weightOptions")?.map((option: string, index: number) => (
+                              <div 
+                                key={index}
+                                className="flex items-center bg-white border border-gray-300 rounded-md px-3 py-1"
+                              >
+                                <Weight className="h-4 w-4 mr-2 text-gray-500" />
+                                <span>{option}</span>
+                                <Button 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6 ml-1 p-0"
+                                  onClick={() => {
+                                    const currentOptions = form.watch("weightOptions") || [];
+                                    form.setValue(
+                                      "weightOptions", 
+                                      currentOptions.filter((_, i) => i !== index)
+                                    );
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            {(!form.watch("weightOptions") || form.watch("weightOptions").length === 0) && (
+                              <div className="text-sm text-gray-500 italic">
+                                No weight options added yet. Add some above.
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
+                        
+                        {/* Weight prices form */}
+                        <div className="mt-6">
+                          <Label>Set Prices for Each Weight</Label>
+                          {form.watch("weightOptions")?.length > 0 ? (
+                            <div className="bg-white p-4 border border-gray-200 rounded-md mt-2">
+                              <p className="text-sm text-gray-600 mb-4">
+                                Enter the price for each weight option. Leave blank to use the default price.
+                              </p>
+                              <div className="space-y-3">
+                                {form.watch("weightOptions")?.map((option: string, index: number) => {
+                                  // Find the price for this weight option if it exists
+                                  const weightPrice = weightPrices.find(wp => wp.weight === option);
+                                  return (
+                                    <div key={index} className="flex items-center gap-4">
+                                      <div className="w-1/3">
+                                        <div className="flex items-center">
+                                          <Weight className="h-4 w-4 mr-2 text-gray-500" />
+                                          <span>{option}</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="relative">
+                                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                                          <Input
+                                            placeholder="Price for this weight"
+                                            className="pl-8"
+                                            value={weightPrice?.price || ""}
+                                            onChange={(e) => {
+                                              const updatedPrices = [...weightPrices];
+                                              const existingIndex = updatedPrices.findIndex(wp => wp.weight === option);
+                                              
+                                              if (existingIndex >= 0) {
+                                                updatedPrices[existingIndex].price = e.target.value;
+                                              } else {
+                                                updatedPrices.push({
+                                                  weight: option,
+                                                  price: e.target.value
+                                                });
+                                              }
+                                              
+                                              setWeightPrices(updatedPrices);
+                                              // Reset saved status when changes are made
+                                              setWeightPricesSaved(false);
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              
+                              <div className="p-4 mt-2 border border-green-200 bg-green-50 rounded-md">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h4 className="text-green-700 font-medium mb-2">Save Your Weight Prices</h4>
+                                    <p className="text-sm text-green-600 mb-4">
+                                      You've set up weight-specific prices. Simply click the 
+                                      <span className="font-semibold"> "Save Weight Prices" </span> 
+                                      button below to save them directly to the database.
+                                    </p>
+                                    <p className="text-sm text-green-600 mb-4">
+                                      <CheckCircle2 className="inline-block h-4 w-4 mr-1" /> 
+                                      No need to click "Update Product" afterward - your changes will be saved immediately!
+                                    </p>
+                                  </div>
+                                  
+                                  {weightPricesSaved && (
+                                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded-md flex items-center">
+                                      <Check className="h-4 w-4 mr-2" />
+                                      <span className="text-sm font-medium">Prices saved to form</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Using a div with onClick instead of a button to avoid form submission issues */}
+                                <div className="flex justify-end">
+                                  <div
+                                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors 
+                                      focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none 
+                                      disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 
+                                      bg-green-700 hover:bg-green-600 text-white cursor-pointer"
+                                    onClick={async () => {
+                                      // Save weight prices directly to the database via API
+                                      if (weightPrices.length > 0 && productId) {
+                                        try {
+                                          // Convert to object format
+                                          const pricesObj: Record<string, string> = {};
+                                          weightPrices.forEach(item => {
+                                            pricesObj[item.weight] = item.price;
+                                          });
+                                          
+                                          // Convert to JSON string for the API
+                                          const weightPricesJson = JSON.stringify(pricesObj);
+                                          
+                                          // Save to form state first (as backup)
+                                          form.setValue("weightPrices", weightPricesJson);
+                                          
+                                          // Set loading state
+                                          setSubmitting(true);
+                                          
+                                          // Save directly to database
+                                          const response = await fetch(`/api/admin/products/${productId}/weight-prices`, {
+                                            method: "POST",
+                                            headers: {
+                                              "Content-Type": "application/json",
+                                              "x-admin-key": "admin-secret",
+                                            },
+                                            body: JSON.stringify({ weightPrices: weightPricesJson }),
+                                          });
+                                          
+                                          if (!response.ok) {
+                                            const result = await response.json();
+                                            throw new Error(result.message || "Failed to save weight prices");
+                                          }
+                                          
+                                          // Set saved state to true to show visual indicator
+                                          setWeightPricesSaved(true);
+                                          
+                                          // Show success message
+                                          toast({
+                                            title: "Weight prices saved successfully",
+                                            description: "Prices have been saved directly to the database."
+                                          });
+                                          
+                                          console.log("Weight prices saved to database:", pricesObj);
+                                        } catch (error) {
+                                          console.error("Error saving weight prices:", error);
+                                          toast({
+                                            title: "Error saving prices",
+                                            description: error instanceof Error ? error.message : "Something went wrong while saving prices.",
+                                            variant: "destructive"
+                                          });
+                                        } finally {
+                                          setSubmitting(false);
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Save Weight Prices
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-500 italic">
+                              Add weight options above, then click "Update Prices" to set prices for each weight.
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

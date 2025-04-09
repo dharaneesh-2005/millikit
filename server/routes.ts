@@ -735,6 +735,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error deleting product" });
     }
   });
+  
+  // Specialized endpoint for updating weight prices directly
+  app.post("/api/admin/products/:id/weight-prices", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      // Validate the request body
+      if (!req.body || !req.body.weightPrices) {
+        return res.status(400).json({ message: "Weight prices are required" });
+      }
+      
+      const product = await storage.getProductById(id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      console.log("Updating product weight prices:", id, req.body.weightPrices);
+      
+      // Update only the weight prices field
+      const updatedProduct = await storage.updateProduct(id, {
+        weightPrices: req.body.weightPrices
+      });
+      
+      res.status(200).json(updatedProduct);
+    } catch (error) {
+      console.error("Error updating weight prices:", error);
+      res.status(500).json({ message: "Error updating weight prices" });
+    }
+  });
 
   // Admin Contact Management
   app.get("/api/admin/contacts", isAdmin, async (req, res) => {
