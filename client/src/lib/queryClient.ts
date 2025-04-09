@@ -1,42 +1,71 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
+/**
+ * Throw an error if the response is not OK, including detailed error message if available
+ */
+export async function throwIfResNotOk(res: Response): Promise<void> {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let message = `HTTP Error ${res.status}`;
+    let error = undefined;
+
+    try {
+      // Try to parse JSON error message
+      const json = await res.json();
+      if (json.message) {
+        message = json.message;
+      } else if (json.error) {
+        message = json.error;
+      }
+      error = json;
+    } catch (_) {
+      // If not JSON, try to get text
+      try {
+        message = await res.text();
+      } catch (_) {
+        // If all else fails, use default message
+      }
+    }
+
+    const httpError = new Error(message);
+    (httpError as any).status = res.status;
+    (httpError as any).error = error;
+    throw httpError;
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
+/**
+ * Helper to create fetch requests with the correct headers for API requests
+ */
+export const apiRequest = async (url: string, options: RequestInit = {}) => {
   const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    ...options,
+    headers: {
+      ...options.headers,
+      "Content-Type": "application/json",
+    },
   });
 
   await throwIfResNotOk(res);
-  return res;
-}
+
+  // Return nothing for 204 No Content
+  if (res.status === 204) {
+    return;
+  }
+
+  return res.json();
+};
 
 /**
- * API request specifically for admin-related endpoints that need authentication
+ * Helper for admin API requests that need to include the session ID
  */
-export async function adminApiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
+export const adminApiRequest = async (method: string, url: string, data?: any) => {
   // Get admin session ID from sessionStorage
   const sessionId = sessionStorage.getItem("adminSessionId");
+  const isAdminAuth = sessionStorage.getItem("adminAuthenticated") === "true";
   
   // Prepare headers with session ID if available
   const headers: Record<string, string> = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
   };
   
   // Try session-based auth first
@@ -45,39 +74,61 @@ export async function adminApiRequest(
   }
   
   // Add admin key if available (for serverless environments like Vercel)
-  const adminKey = import.meta.env.VITE_ADMIN_KEY;
+  const adminKey = import.meta.env.VITE_ADMIN_KEY || "admin-secret";
   if (adminKey) {
     headers["x-admin-key"] = adminKey;
-    console.log("Added admin key to request");
   }
   
-  const res = await fetch(url, {
+  const options: RequestInit = {
     method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
-  });
-
+  };
+  
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+  
+  const res = await fetch(url, options);
+  
   await throwIfResNotOk(res);
-  return res;
-}
+  
+  // Return nothing for 204 No Content
+  if (res.status === 204) {
+    return;
+  }
+  
+  return res.json();
+};
 
 type UnauthorizedBehavior = "returnNull" | "throw";
+
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error) {
+      console.error("Error in query function:", error);
+      
+      // If we should return null on error
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 /**

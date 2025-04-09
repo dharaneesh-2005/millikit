@@ -33,7 +33,7 @@ import {
   FormLabel, 
   FormMessage 
 } from "@/components/ui/form";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   ArrowLeft, 
   Check,
