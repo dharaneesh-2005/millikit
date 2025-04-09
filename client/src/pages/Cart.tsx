@@ -28,31 +28,26 @@ export default function Cart() {
     setQuantities(initialQuantities);
   }, [cartItems]);
   
-  // Update quantity locally
-  const handleQuantityChange = (itemId: number, value: string) => {
+  // Update quantity locally and in the cart automatically
+  const handleQuantityChange = async (itemId: number, value: string) => {
     const newQuantity = parseInt(value);
     if (!isNaN(newQuantity) && newQuantity > 0) {
       setQuantities(prev => ({
         ...prev,
         [itemId]: newQuantity
       }));
-    }
-  };
-  
-  // Update cart item quantity
-  const handleUpdateItem = async (itemId: number) => {
-    try {
-      const newQuantity = quantities[itemId];
-      if (newQuantity > 0) {
+      
+      // Debounce the update to prevent excessive API calls
+      try {
         await updateCartItem(itemId, newQuantity);
+      } catch (error) {
+        console.error("Error updating cart item:", error);
+        toast({
+          title: "Error",
+          description: t('errorOccurred'),
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error("Error updating cart item:", error);
-      toast({
-        title: "Error",
-        description: t('errorOccurred'),
-        variant: "destructive",
-      });
     }
   };
   
@@ -198,13 +193,7 @@ export default function Cart() {
                                 >+</button>
                               </div>
                               
-                              <div className="flex gap-2">
-                                <button 
-                                  className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 focus:outline-none transition-colors text-sm"
-                                  onClick={() => handleUpdateItem(item.id)}
-                                >
-                                  {t('updateCart')}
-                                </button>
+                              <div>
                                 <button 
                                   className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 focus:outline-none transition-colors text-sm"
                                   onClick={() => handleRemoveItem(item.id)}
