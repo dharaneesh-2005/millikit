@@ -73,7 +73,7 @@ export default function Header() {
                 transition={{ delay: 0.3 + (index * 0.1), duration: 0.5 }}
               >
                 <Link 
-                  href={path === '/' ? path : path.substring(1)}
+                  href={path} 
                   className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors text-lg`}
                 >
                   {path === '/' ? t('home') : path === '/products' ? t('products') : t('contact')}
@@ -163,8 +163,8 @@ export default function Header() {
                   transition={{ delay: 0.1 * index, duration: 0.3 }}
                 >
                   <Link 
-                    href={path === '/' ? path : path}
-                    className={`block py-3 px-4 ${isActivePath(path === '/' ? path : path) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors border-b border-gray-100 last:border-b-0`}
+                    href={path}
+                    className={`block py-3 px-4 ${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors border-b border-gray-100 last:border-b-0`}
                     onClick={() => setShowMobileMenu(false)}
                   >
                     {path === '/' ? t('home') : 
