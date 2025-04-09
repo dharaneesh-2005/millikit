@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/LanguageContext";
+import LanguageSelector from "./LanguageSelector";
 import logoPath from "@assets/LOGO-removebg-preview.png";
 
 export default function Header() {
@@ -39,13 +40,14 @@ export default function Header() {
 
   return (
     <motion.header 
-      className={`fixed w-full top-0 z-50 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-transparent'}`}
+      className={`fixed w-full top-0 z-50 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-yellow-400'}`}
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <nav className="container mx-auto px-4 md:px-12 lg:px-16 py-4 md:py-6">
-        <div className="flex items-center justify-between relative">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -61,18 +63,18 @@ export default function Header() {
             </Link>
           </motion.div>
           
-          <div className="hidden md:flex">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex space-x-8">
             {['/', '/products', '/contact'].map((path, index) => (
               <motion.div
                 key={path}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + (index * 0.1), duration: 0.5 }}
-                className="px-6"
               >
                 <Link 
                   href={path === '/' ? path : path.substring(1)}
-                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-medium' : 'text-gray-700 hover:text-green-600'} transition-colors text-lg`}
+                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-semibold' : 'text-gray-700 hover:text-green-600'} transition-colors text-lg`}
                 >
                   {path === '/' ? t('home') : path === '/products' ? t('products') : t('contact')}
                 </Link>
@@ -80,32 +82,38 @@ export default function Header() {
             ))}
           </div>
           
-          <div className="flex items-center">
-            {/* Admin login link - visible on both mobile and desktop */}
+          {/* Action icons */}
+          <div className="flex items-center gap-3 md:gap-6">
+            {/* Language Selector for Desktop - only visible on desktop */}
+            <div className="hidden md:block">
+              <LanguageSelector />
+            </div>
+            
+            {/* Admin login icon */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
-              className="px-4"
             >
               <Link href="/admin/login" className="text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-user-shield text-xl"></i>
               </Link>
             </motion.div>
+            
+            {/* Cart icon */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
-              className="px-4"
             >
               <Link href="/cart" className="relative text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-shopping-cart text-xl"></i>
                 <AnimatePresence>
                   {cartItemCount > 0 && (
                     <motion.span 
-                      className="cart-count absolute -top-2 -right-2 bg-yellow-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full"
+                      className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full"
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
@@ -116,8 +124,15 @@ export default function Header() {
                 </AnimatePresence>
               </Link>
             </motion.div>
+            
+            {/* Language Selector for Mobile - only visible on mobile */}
+            <div className="block md:hidden">
+              <LanguageSelector />
+            </div>
+            
+            {/* Mobile menu toggle */}
             <motion.button 
-              className="md:hidden text-gray-700 pl-4"
+              className="md:hidden text-gray-700"
               onClick={toggleMobileMenu}
               aria-label="Toggle mobile menu"
               initial={{ opacity: 0 }}

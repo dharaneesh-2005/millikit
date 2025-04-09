@@ -1,83 +1,49 @@
-import { useState, useEffect } from "react";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { motion } from "framer-motion";
 
 export default function LanguageSelector() {
   const { language, setLanguage } = useTranslation();
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [animating, setAnimating] = useState(false);
 
-  useEffect(() => {
-    // Set component as loaded after initial render
-    setIsLoaded(true);
-  }, []);
-
-  const toggleLanguage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Prevent multiple rapid clicks
-    if (animating) return;
-    
-    setAnimating(true);
+  // Simple direct toggle without animations or delays
+  const toggleLanguage = () => {
     const newLanguage = language === "en" ? "ta" : "en";
-    
-    // Apply animation class first
-    const langBadge = document.querySelector('.lang-badge');
-    if (langBadge) {
-      langBadge.classList.add('lang-change');
-    }
-    
-    // Change language after a small delay for animation to take effect
-    setTimeout(() => {
-      setLanguage(newLanguage);
-      // Store in localStorage (even though context already does this, for redundancy)
-      localStorage.setItem("language", newLanguage);
-      
-      // Remove animation class and reset state
-      setTimeout(() => {
-        if (langBadge) {
-          langBadge.classList.remove('lang-change');
-        }
-        setAnimating(false);
-      }, 300);
-    }, 100);
-  };
-
-  // Handle select change for desktop
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newLanguage = e.target.value as "en" | "ta";
     setLanguage(newLanguage);
   };
 
   return (
     <>
       {/* Desktop language selector */}
-      <div className={`language-selector hidden md:block ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
-        <select 
+      <div className="hidden md:flex items-center">
+        <motion.select 
           value={language}
-          onChange={handleSelectChange}
-          className="bg-white border rounded-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          disabled={animating}
+          onChange={(e) => setLanguage(e.target.value as "en" | "ta")}
+          className="bg-white border border-gray-300 rounded-full px-3 py-1 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent shadow-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.3 }}
         >
           <option value="en">English</option>
           <option value="ta">தமிழ்</option>
-        </select>
+        </motion.select>
       </div>
 
-      {/* Mobile language toggle */}
-      <div className={`md:hidden fixed top-4 right-32 z-50 ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
-        <button 
-          onClick={toggleLanguage}
-          className="text-gray-700 hover:text-green-600 transition-colors p-2"
-          aria-label="Toggle language"
-          disabled={animating}
-        >
+      {/* Mobile language button */}
+      <motion.button 
+        onClick={toggleLanguage}
+        className="md:hidden text-gray-700 flex items-center justify-center"
+        aria-label="Toggle language"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7 }}
+        whileTap={{ scale: 0.9 }}
+      >
+        <div className="relative">
           <i className="fas fa-globe text-xl"></i>
-          <span className="lang-badge absolute -top-1 -right-1 bg-yellow-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full text-[10px]">
+          <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full text-[10px]">
             {language === "en" ? "EN" : "TA"}
           </span>
-        </button>
-      </div>
+        </div>
+      </motion.button>
     </>
   );
 }
