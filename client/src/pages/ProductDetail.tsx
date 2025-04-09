@@ -183,10 +183,22 @@ export default function ProductDetail() {
                 // Check if the weight price has the new structure (with price and comparePrice)
                 if (typeof parsedPrices[weight] === 'object' && parsedPrices[weight] !== null) {
                   // New structure with price and comparePrice
-                  // Handle the case where price might be an object instead of a string
-                  const priceValue = typeof parsedPrices[weight].price === 'object' 
-                    ? (product.price || '0') // Fallback to product price if price is an object
-                    : parsedPrices[weight].price;
+                  // Handle the case where price might be an object or "[object Object]" string (corrupted)
+                  let priceValue = product.price || '0'; // default fallback
+                  
+                  if (typeof parsedPrices[weight].price === 'object') {
+                    console.log(`Found price as object for ${weight}, using product price ${product.price}`);
+                    // Use default product price when price is an object
+                    priceValue = product.price || '0';
+                  } else if (typeof parsedPrices[weight].price === 'string' && 
+                             parsedPrices[weight].price.includes('[object Object]')) {
+                    console.log(`Found corrupted price string for ${weight}, using product price ${product.price}`);
+                    // Use default product price when price is corrupted string
+                    priceValue = product.price || '0';
+                  } else {
+                    // Use the actual weight price
+                    priceValue = parsedPrices[weight].price || product.price || '0';
+                  }
                     
                   filteredPrices[weight] = {
                     price: priceValue,
@@ -511,7 +523,14 @@ export default function ProductDetail() {
                 <span className="text-3xl font-bold text-green-600 mr-2">
                   ₹{currentPrice || product.price}
                 </span>
-                {product.comparePrice && (
+                {currentComparePrice ? (
+                  <>
+                    <span className="text-gray-500 line-through">₹{currentComparePrice}</span>
+                    <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                      Save {Math.round((1 - (parseFloat(currentPrice || product.price) / parseFloat(currentComparePrice))) * 100)}%
+                    </span>
+                  </>
+                ) : product.comparePrice && (
                   <>
                     <span className="text-gray-500 line-through">₹{product.comparePrice}</span>
                     <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">

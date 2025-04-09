@@ -186,11 +186,32 @@ export default function ProductForm() {
           // Create weight price items with all the required data
           // This ensures we have exactly one entry for each weight option
           const weightPriceItems = weights.map(weight => {
-            // If we have a price for this weight in the saved data, use it
-            const price = pricesObj[weight] ? String(pricesObj[weight]) : product.price;
+            // Handle the price based on its structure
+            let price = product.price;
+            let comparePrice = product.comparePrice || "";
             
-            // Set default comparePrice to main product comparePrice
-            const comparePrice = product.comparePrice || "";
+            if (pricesObj[weight]) {
+              // New structure with price and comparePrice as objects
+              if (typeof pricesObj[weight] === 'object' && pricesObj[weight] !== null) {
+                // Check if the price is an object or "[object Object]" string (corrupted data)
+                if (typeof pricesObj[weight].price === 'object' || 
+                    (typeof pricesObj[weight].price === 'string' && pricesObj[weight].price.includes('[object Object]'))) {
+                  price = product.price; // Fallback to default product price
+                  console.log(`Found corrupted price data for ${weight}, using default price ${price}`);
+                } else {
+                  price = pricesObj[weight].price || product.price;
+                }
+                  
+                comparePrice = pricesObj[weight].comparePrice || product.comparePrice || "";
+                
+                console.log(`Parsed weight ${weight} with object structure, price: ${price}, comparePrice: ${comparePrice}`);
+              } 
+              // Old structure (direct price value)
+              else {
+                price = String(pricesObj[weight]);
+                console.log(`Parsed weight ${weight} with simple structure, price: ${price}`);
+              }
+            }
             
             return {
               weight,
@@ -1143,10 +1164,17 @@ export default function ProductForm() {
                                           // Convert to object format with both price and comparePrice
                                           const pricesObj: Record<string, {price: string, comparePrice?: string}> = {};
                                           weightPrices.forEach(item => {
+                                            // Make sure we never store an object as a string within the price field
+                                            const safePrice = typeof item.price === 'object' 
+                                              ? form.getValues('price') || '0' // Use default price if price is an object
+                                              : String(item.price || '0');
+                                              
                                             pricesObj[item.weight] = {
-                                              price: item.price,
+                                              price: safePrice,
                                               comparePrice: item.comparePrice
                                             };
+                                            
+                                            console.log(`Added weight price for ${item.weight}: price=${safePrice}, comparePrice=${item.comparePrice}`);
                                           });
                                           
                                           // Convert to JSON string for the API
