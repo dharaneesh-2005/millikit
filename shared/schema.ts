@@ -44,6 +44,7 @@ export const products = pgTable("products", {
   rating: decimal("rating", { precision: 3, scale: 2 }),
   reviewCount: integer("review_count").default(0),
   weightOptions: text("weight_options").array(),
+  weightPrices: text("weight_prices"), // JSON string to store weight-price mappings
   createdAt: timestamp("created_at").defaultNow(),
   reviews: text("reviews"),
 });
@@ -56,6 +57,10 @@ export interface ProductReview {
   rating: number;
   comment: string;
   helpfulCount: number;
+}
+
+export interface WeightPrice {
+  [weight: string]: string; // Maps weight (e.g., "500g") to price as string (e.g., "180.00")
 }
 
 export const insertProductSchema = createInsertSchema(products).omit({

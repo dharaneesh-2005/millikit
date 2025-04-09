@@ -20,6 +20,10 @@ export default function ProductDetail() {
   const [activeTab, setActiveTab] = useState("description");
   const [mainImage, setMainImage] = useState("");
   
+  // State for weight-specific prices
+  const [weightPrices, setWeightPrices] = useState<Record<string, string>>({});
+  const [currentPrice, setCurrentPrice] = useState<string>("");
+  
   // Review form state
   const [isReviewFormOpen, setIsReviewFormOpen] = useState<boolean>(false);
   const [reviewName, setReviewName] = useState<string>("");
@@ -156,6 +160,32 @@ export default function ProductDetail() {
       } else {
         // Fallback to default weight
         setSelectedWeight("500g");
+      }
+      
+      // Parse weight prices if available
+      if (product.weightPrices) {
+        try {
+          const parsedPrices = JSON.parse(product.weightPrices);
+          setWeightPrices(parsedPrices);
+          
+          // Set initial current price based on default selected weight
+          const initialWeight = product.weightOptions && product.weightOptions.length > 0 
+            ? product.weightOptions[0] 
+            : "500g";
+            
+          if (parsedPrices[initialWeight]) {
+            setCurrentPrice(parsedPrices[initialWeight]);
+          } else {
+            setCurrentPrice(product.price);
+          }
+        } catch (e) {
+          console.error("Failed to parse weight prices:", e);
+          setWeightPrices({});
+          setCurrentPrice(product.price);
+        }
+      } else {
+        setWeightPrices({});
+        setCurrentPrice(product.price);
       }
     }
   }, [product]);
@@ -424,12 +454,14 @@ export default function ProductDetail() {
               <p className="text-gray-600 mb-6">{product.shortDescription}</p>
               
               <div className="flex items-baseline mb-6">
-                <span className="text-3xl font-bold text-green-600 mr-2">₹{product.price}</span>
+                <span className="text-3xl font-bold text-green-600 mr-2">
+                  ₹{currentPrice || product.price}
+                </span>
                 {product.comparePrice && (
                   <>
                     <span className="text-gray-500 line-through">₹{product.comparePrice}</span>
                     <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                      Save {Math.round((1 - (parseFloat(product.price) / parseFloat(product.comparePrice))) * 100)}%
+                      Save {Math.round((1 - (parseFloat(currentPrice || product.price) / parseFloat(product.comparePrice))) * 100)}%
                     </span>
                   </>
                 )}
@@ -446,7 +478,15 @@ export default function ProductDetail() {
                         name="weight" 
                         value={weight} 
                         checked={selectedWeight === weight}
-                        onChange={() => setSelectedWeight(weight)}
+                        onChange={() => {
+                          setSelectedWeight(weight);
+                          // Update price when weight option changes
+                          if (weightPrices[weight]) {
+                            setCurrentPrice(weightPrices[weight]);
+                          } else {
+                            setCurrentPrice(product.price);
+                          }
+                        }}
                         className="sr-only peer" 
                       />
                       <span className="px-4 py-2 border rounded-lg peer-checked:bg-green-50 peer-checked:border-green-500 cursor-pointer">

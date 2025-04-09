@@ -70,9 +70,17 @@ const productFormSchema = insertProductSchema.extend({
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Price must be a valid number"),
   // Add slug field with validation
   slug: z.string().optional(),
+  // Add weight prices field
+  weightPrices: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
+
+// For managing weight-specific prices
+interface WeightPriceItem {
+  weight: string;
+  price: string;
+}
 
 // For review management, we'll use a local type
 interface ReviewItem {
@@ -100,6 +108,9 @@ export default function ProductForm() {
   const [editingReview, setEditingReview] = useState<ReviewItem | null>(null);
   const [editReviewIndex, setEditReviewIndex] = useState<number>(-1);
 
+  // State for managing weight-price combinations
+  const [weightPrices, setWeightPrices] = useState<WeightPriceItem[]>([]);
+  
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
@@ -122,6 +133,7 @@ export default function ProductForm() {
       weightOptions: [],
       slug: "",
       reviews: "",
+      weightPrices: "",
     },
   });
 
@@ -158,6 +170,23 @@ export default function ProductForm() {
       
       const product = await response.json();
       
+      // Parse weight prices if available
+      if (product.weightPrices) {
+        try {
+          const pricesObj = JSON.parse(product.weightPrices);
+          const weightPriceItems = Object.entries(pricesObj).map(([weight, price]) => ({
+            weight,
+            price: String(price)
+          }));
+          setWeightPrices(weightPriceItems);
+        } catch (e) {
+          console.error("Error parsing weight prices:", e);
+          setWeightPrices([]);
+        }
+      } else {
+        setWeightPrices([]);
+      }
+      
       // Map API data to form values
       form.reset({
         name: product.name,
@@ -179,6 +208,7 @@ export default function ProductForm() {
         weightOptions: product.weightOptions || [],
         slug: product.slug || "",
         reviews: product.reviews || "[]",
+        weightPrices: product.weightPrices || "",
       });
     } catch (error) {
       console.error("Error fetching product:", error);
@@ -268,6 +298,15 @@ export default function ProductForm() {
       
       // Update the reviewCount to match the actual number of reviews
       data = { ...data, reviewCount: actualReviewCount };
+      
+      // Convert weightPrices array to JSON string and add to form data
+      if (weightPrices.length > 0) {
+        const pricesObj: Record<string, string> = {};
+        weightPrices.forEach(item => {
+          pricesObj[item.weight] = item.price;
+        });
+        data = { ...data, weightPrices: JSON.stringify(pricesObj) };
+      }
 
       const url = isEditMode
         ? `/api/admin/products/${productId}`
@@ -902,6 +941,92 @@ export default function ProductForm() {
                         </FormItem>
                       )}
                     />
+                    
+                    {/* Weight Prices Management */}
+                    <div className="mt-4 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-md font-medium">Weight-Specific Prices</h3>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const options = form.getValues("weightOptions") || [];
+                            if (options.length === 0) {
+                              toast({
+                                title: "No weight options",
+                                description: "Please add weight options first",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            
+                            // Add prices for any weight options that don't have prices yet
+                            const newWeightPrices = [...weightPrices];
+                            options.forEach(option => {
+                              if (!newWeightPrices.some(wp => wp.weight === option)) {
+                                newWeightPrices.push({
+                                  weight: option,
+                                  price: form.getValues("price") || ""
+                                });
+                              }
+                            });
+                            setWeightPrices(newWeightPrices);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Update Prices
+                        </Button>
+                      </div>
+                      
+                      {weightPrices.length > 0 ? (
+                        <div className="rounded-md border">
+                          <div className="grid grid-cols-12 bg-gray-50 p-2 rounded-t-md">
+                            <div className="col-span-5 font-medium">Weight</div>
+                            <div className="col-span-5 font-medium">Price (₹)</div>
+                            <div className="col-span-2"></div>
+                          </div>
+                          <div className="divide-y">
+                            {weightPrices.map((item, index) => (
+                              <div key={index} className="grid grid-cols-12 p-2 items-center">
+                                <div className="col-span-5">{item.weight}</div>
+                                <div className="col-span-5">
+                                  <Input
+                                    type="text"
+                                    value={item.price}
+                                    onChange={(e) => {
+                                      const newWeightPrices = [...weightPrices];
+                                      newWeightPrices[index].price = e.target.value;
+                                      setWeightPrices(newWeightPrices);
+                                    }}
+                                    className="h-8"
+                                    placeholder="Price"
+                                  />
+                                </div>
+                                <div className="col-span-2 flex justify-end">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      const newWeightPrices = [...weightPrices];
+                                      newWeightPrices.splice(index, 1);
+                                      setWeightPrices(newWeightPrices);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 italic">
+                          Add weight options above, then click "Update Prices" to set prices for each weight.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
