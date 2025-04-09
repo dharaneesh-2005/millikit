@@ -121,81 +121,101 @@ export default function Cart() {
                   </div>
                   
                   <ul>
-                    {cartItems.map(item => (
-                      <li key={item.id} className="p-6 border-b">
-                        <div className="flex flex-col md:flex-row items-center gap-4">
-                          <div className="w-24 h-24 flex-shrink-0">
-                            <img 
-                              src={item.product?.imageUrl} 
-                              alt={item.product?.name} 
-                              className="w-full h-full object-cover rounded-md"
-                            />
-                          </div>
-                          
-                          <div className="flex-grow">
-                            <h3 className="text-lg font-medium text-gray-800">
-                              {item.product?.name}
-                            </h3>
-                            <p className="text-sm text-gray-500 mb-2">
-                              {item.product?.shortDescription?.substring(0, 60)}
-                              {item.product?.shortDescription && item.product.shortDescription.length > 60 ? '...' : ''}
-                            </p>
-                            
-                            {/* Display selected weight if available */}
-                            {item.metaData && (
-                              <p className="text-sm text-gray-600 mb-1">
-                                Weight: <span className="font-medium">{JSON.parse(item.metaData)?.selectedWeight || 'Standard'}</span>
-                              </p>
-                            )}
-                            
-                            <p className="text-green-600 font-bold">
-                              ₹{item.product?.displayPrice || item.product?.price || 0}
-                            </p>
-                          </div>
-                          
+                    {cartItems.map((item) => {
+                      // Extract weight information from metaData
+                      let selectedWeight = 'Standard';
+                      try {
+                        if (item.metaData) {
+                          const metadata = JSON.parse(item.metaData);
+                          if (metadata && metadata.selectedWeight) {
+                            selectedWeight = metadata.selectedWeight;
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Error parsing weight data:", error);
+                      }
+                      
+                      // Generate a truly unique key for React rendering
+                      const randomSuffix = Math.random().toString(36).substring(2, 10);
+                      const itemKey = `${item.id}-${selectedWeight}-${randomSuffix}`;
+                      
+                      return (
+                        <li key={itemKey} className="p-6 border-b">
                           <div className="flex flex-col md:flex-row items-center gap-4">
-                            <div className="flex items-center border rounded-md overflow-hidden">
-                              <button 
-                                className="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none"
-                                onClick={() => {
-                                  const newQuantity = Math.max(1, quantities[item.id] - 1);
-                                  handleQuantityChange(item.id, newQuantity.toString());
-                                }}
-                              >-</button>
-                              <input 
-                                type="number" 
-                                className="w-12 text-center py-1 focus:outline-none" 
-                                value={quantities[item.id] || item.quantity}
-                                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                min="1"
+                            <div className="w-24 h-24 flex-shrink-0">
+                              <img 
+                                src={item.product?.imageUrl} 
+                                alt={item.product?.name} 
+                                className="w-full h-full object-cover rounded-md"
                               />
-                              <button 
-                                className="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none"
-                                onClick={() => {
-                                  const newQuantity = (quantities[item.id] || item.quantity) + 1;
-                                  handleQuantityChange(item.id, newQuantity.toString());
-                                }}
-                              >+</button>
                             </div>
                             
-                            <div className="flex gap-2">
-                              <button 
-                                className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 focus:outline-none transition-colors text-sm"
-                                onClick={() => handleUpdateItem(item.id)}
-                              >
-                                {t('updateCart')}
-                              </button>
-                              <button 
-                                className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 focus:outline-none transition-colors text-sm"
-                                onClick={() => handleRemoveItem(item.id)}
-                              >
-                                {t('removeItem')}
-                              </button>
+                            <div className="flex-grow">
+                              <h3 className="text-lg font-medium text-gray-800">
+                                {item.product?.name}
+                              </h3>
+                              <p className="text-sm text-gray-500 mb-2">
+                                {item.product?.shortDescription?.substring(0, 60)}
+                                {item.product?.shortDescription && item.product.shortDescription.length > 60 ? '...' : ''}
+                              </p>
+                              
+                              {/* Display weight badge */}
+                              <div className="mb-2 mt-1 inline-block bg-gray-100 px-2 py-1 rounded-md">
+                                <p className="text-sm text-gray-700">
+                                  <span className="font-medium">Weight: </span>
+                                  <span className="font-bold">{selectedWeight}</span>
+                                </p>
+                              </div>
+                              
+                              <p className="text-green-600 font-bold">
+                                ₹{item.product?.displayPrice || item.product?.price || 0}
+                              </p>
+                            </div>
+                            
+                            <div className="flex flex-col md:flex-row items-center gap-4">
+                              <div className="flex items-center border rounded-md overflow-hidden">
+                                <button 
+                                  className="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none"
+                                  onClick={() => {
+                                    const newQuantity = Math.max(1, quantities[item.id] - 1);
+                                    handleQuantityChange(item.id, newQuantity.toString());
+                                  }}
+                                >-</button>
+                                <input 
+                                  type="number" 
+                                  className="w-12 text-center py-1 focus:outline-none" 
+                                  value={quantities[item.id] || item.quantity}
+                                  onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                  min="1"
+                                />
+                                <button 
+                                  className="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none"
+                                  onClick={() => {
+                                    const newQuantity = (quantities[item.id] || item.quantity) + 1;
+                                    handleQuantityChange(item.id, newQuantity.toString());
+                                  }}
+                                >+</button>
+                              </div>
+                              
+                              <div className="flex gap-2">
+                                <button 
+                                  className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 focus:outline-none transition-colors text-sm"
+                                  onClick={() => handleUpdateItem(item.id)}
+                                >
+                                  {t('updateCart')}
+                                </button>
+                                <button 
+                                  className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 focus:outline-none transition-colors text-sm"
+                                  onClick={() => handleRemoveItem(item.id)}
+                                >
+                                  {t('removeItem')}
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                   </ul>
                   
                   <div className="p-6 flex justify-between items-center">

@@ -293,8 +293,7 @@ export class PostgreSQLStorage implements IStorage {
   async getCartItemWithProduct(sessionId: string, productId: number, metaDataValue?: string): Promise<CartItem | undefined> {
     return this.executeWithRetry(async () => {
       try {
-        // Simply get cart items by session and product ID, ignoring metaData for now
-        // due to schema compatibility issues
+        // First try using drizzle
         const results = await this.db
           .select()
           .from(cartItems)
@@ -304,25 +303,77 @@ export class PostgreSQLStorage implements IStorage {
               eq(cartItems.productId, productId)
             )
           );
-        
-        // If we have results and metaData is requested, try to filter them in-memory
-        if (results.length > 0 && metaDataValue) {
-          const matchingItem = results.find(item => 
-            item.metaData === metaDataValue || 
-            (item.metaData && metaDataValue && item.metaData.toString() === metaDataValue.toString())
-          );
           
-          if (matchingItem) {
-            return matchingItem;
+        // If metaData is provided, we need to match on that too
+        if (results.length > 0 && metaDataValue) {
+          console.log(`Searching for cart item with metaData: ${metaDataValue} among ${results.length} items`);
+          
+          // Try to find a match based on metaData
+          for (const item of results) {
+            try {
+              // If the raw values match exactly 
+              if (item.metaData === metaDataValue) {
+                console.log('Found matching item with exact metaData match');
+                return item;
+              }
+              
+              // Parse the metaData for more sophisticated matching
+              if (item.metaData && metaDataValue) {
+                const itemMeta = JSON.parse(item.metaData);
+                const valueMeta = JSON.parse(metaDataValue);
+                
+                // Check if the selectedWeight values match
+                if (itemMeta.selectedWeight === valueMeta.selectedWeight) {
+                  console.log(`Found matching item with parsed metaData. Weight: ${itemMeta.selectedWeight}`);
+                  return item;
+                }
+              }
+            } catch (e) {
+              console.error('Error comparing metaData:', e);
+            }
           }
+          
+          // No match found
+          console.log('No cart item with matching metaData found');
+          return undefined; 
         }
         
-        // Return the first matching item by product ID if no metaData match found
+        // If no metaData provided or no specific match needed, return the first item
         return results.length > 0 ? results[0] : undefined;
       } catch (error) {
         console.error('Error in getCartItemWithProduct:', error);
-        // We have a database schema issue, so return nothing rather than triggering more errors
-        return undefined;
+        
+        // Try a direct SQL approach as a fallback
+        try {
+          let query = 'SELECT * FROM cart_items WHERE session_id = $1 AND product_id = $2';
+          const params = [sessionId, productId];
+          
+          // Add metaData condition if it exists
+          if (metaDataValue) {
+            // Try both equality and JSON comparison
+            query = `
+              SELECT * FROM cart_items 
+              WHERE session_id = $1 
+              AND product_id = $2 
+              AND (meta_data = $3 OR meta_data::text LIKE $4)
+            `;
+            // Add % for LIKE comparison to allow partial matches
+            const metaSearch = `%${JSON.parse(metaDataValue).selectedWeight}%`;
+            params.push(metaDataValue, metaSearch);
+          }
+          
+          const result = await this.client.query(query, params);
+          
+          if (result.rows.length > 0) {
+            console.log('Found cart item using SQL fallback');
+            return this.mapCartItem(result.rows[0]);
+          }
+          
+          return undefined;
+        } catch (sqlError) {
+          console.error('SQL fallback also failed:', sqlError);
+          return undefined;
+        }
       }
     });
   }
@@ -330,25 +381,69 @@ export class PostgreSQLStorage implements IStorage {
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
     return this.executeWithRetry(async () => {
       try {
-        // Always remove metaData field to avoid schema compatibility issues
-        const { metaData, ...cartItemWithoutMeta } = cartItem;
-        console.log('Adding cart item without metaData to avoid schema issues:', cartItemWithoutMeta);
-        
-        // Insert the cart item without metaData
-        const newCartItem = await this.db.insert(cartItems).values(cartItemWithoutMeta).returning();
-        
-        // Return with null metaData
-        const result = { 
-          ...newCartItem[0],
-          metaData: null
-        };
-        
-        return result;
+        // First attempt to insert with metaData
+        try {
+          console.log('Attempting to add cart item with metaData:', cartItem);
+          const newCartItem = await this.db.insert(cartItems).values(cartItem).returning();
+          return newCartItem[0];
+        } catch (metaDataError) {
+          console.error('Error adding to cart with metaData:', metaDataError);
+          
+          // If that fails, try without metaData
+          const { metaData, ...cartItemWithoutMeta } = cartItem;
+          console.log('Falling back: Adding cart item without metaData:', cartItemWithoutMeta);
+          
+          // Insert the cart item without metaData
+          const newCartItem = await this.db.insert(cartItems).values(cartItemWithoutMeta).returning();
+          
+          // Try to update the metaData directly using SQL
+          try {
+            if (metaData) {
+              console.log('Attempting to update metaData using direct SQL');
+              const updatedId = newCartItem[0].id;
+              await this.client.query(
+                'UPDATE cart_items SET meta_data = $1 WHERE id = $2',
+                [metaData, updatedId]
+              );
+              
+              // Get the updated item
+              const updated = await this.client.query(
+                'SELECT * FROM cart_items WHERE id = $1',
+                [updatedId]
+              );
+              
+              if (updated.rows.length > 0) {
+                return this.mapCartItem(updated.rows[0]);
+              }
+            }
+          } catch (updateError) {
+            console.error('Failed to update metaData using SQL:', updateError);
+          }
+          
+          // Return the original result if we couldn't update metaData
+          return { 
+            ...newCartItem[0],
+            metaData: null
+          };
+        }
       } catch (error) {
         console.error('Error adding to cart:', error);
         throw error;
       }
     });
+  }
+  
+  // Helper method to map database row to CartItem
+  private mapCartItem(row: any): CartItem {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      sessionId: row.session_id,
+      productId: row.product_id,
+      quantity: row.quantity,
+      createdAt: row.created_at || new Date(),
+      metaData: row.meta_data
+    };
   }
   
   // Utility method to check if a column exists in a table - always returns false in this implementation

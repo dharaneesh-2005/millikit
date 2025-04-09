@@ -44,7 +44,7 @@ export interface IStorage {
 
   // Cart operations
   getCartItems(sessionId: string): Promise<CartItem[]>;
-  getCartItemWithProduct(sessionId: string, productId: number): Promise<CartItem | undefined>;
+  getCartItemWithProduct(sessionId: string, productId: number, metaData?: string): Promise<CartItem | undefined>;
   addToCart(cartItem: InsertCartItem): Promise<CartItem>;
   updateCartItem(id: number, quantity: number): Promise<CartItem | undefined>;
   removeFromCart(id: number): Promise<void>;
@@ -267,10 +267,36 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async getCartItemWithProduct(sessionId: string, productId: number): Promise<CartItem | undefined> {
-    return Array.from(this.cartItems.values()).find(
-      (item) => item.sessionId === sessionId && item.productId === productId
-    );
+  async getCartItemWithProduct(sessionId: string, productId: number, metaData?: string): Promise<CartItem | undefined> {
+    // If no metaData is provided, find any item with the matching sessionId and productId
+    if (!metaData) {
+      return Array.from(this.cartItems.values()).find(
+        (item) => item.sessionId === sessionId && item.productId === productId
+      );
+    }
+    
+    // If metaData is provided, try to find a match with the exact metaData or parse and compare
+    return Array.from(this.cartItems.values()).find(item => {
+      // First check: exact match
+      if (item.sessionId === sessionId && item.productId === productId && item.metaData === metaData) {
+        return true;
+      }
+      
+      // Second check: comparing parsed values - specifically looking for matching selectedWeight
+      try {
+        if (item.sessionId === sessionId && item.productId === productId && item.metaData && metaData) {
+          const itemMeta = JSON.parse(item.metaData);
+          const valueMeta = JSON.parse(metaData);
+          if (itemMeta.selectedWeight === valueMeta.selectedWeight) {
+            return true;
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing metaData in MemStorage:", e);
+      }
+      
+      return false;
+    });
   }
 
   async addToCart(insertCartItem: InsertCartItem): Promise<CartItem> {
