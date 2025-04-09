@@ -76,12 +76,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
-      const response = await apiRequest("POST", "/api/cart", {
-        productId,
-        quantity,
+      // Make sure we're sending the sessionId in the headers
+      const savedSessionId = localStorage.getItem("cartSessionId") || sessionId;
+      
+      const response = await fetch("/api/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Session-Id": savedSessionId,
+        },
+        body: JSON.stringify({
+          productId,
+          quantity,
+        }),
       });
       
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
       const newItem = await response.json();
+      
+      // If we get a new session ID from the server, save it
+      const returnedSessionId = response.headers.get("session-id");
+      if (returnedSessionId) {
+        setSessionId(returnedSessionId);
+        localStorage.setItem("cartSessionId", returnedSessionId);
+      }
       
       // Update local cart state
       const existingItemIndex = cartItems.findIndex(
@@ -123,7 +144,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
-      await apiRequest("PUT", `/api/cart/${itemId}`, { quantity });
+      const savedSessionId = localStorage.getItem("cartSessionId") || sessionId;
+      
+      const response = await fetch(`/api/cart/${itemId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Session-Id": savedSessionId,
+        },
+        body: JSON.stringify({ quantity }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
       
       // Update local state
       setCartItems(
@@ -153,7 +187,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
-      await apiRequest("DELETE", `/api/cart/${itemId}`);
+      const savedSessionId = localStorage.getItem("cartSessionId") || sessionId;
+      
+      const response = await fetch(`/api/cart/${itemId}`, {
+        method: "DELETE",
+        headers: {
+          "Session-Id": savedSessionId,
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
       
       // Update local state
       setCartItems(cartItems.filter((item) => item.id !== itemId));
@@ -179,7 +224,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
-      await apiRequest("DELETE", "/api/cart");
+      const savedSessionId = localStorage.getItem("cartSessionId") || sessionId;
+      
+      const response = await fetch("/api/cart", {
+        method: "DELETE",
+        headers: {
+          "Session-Id": savedSessionId,
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
       
       // Update local state
       setCartItems([]);
