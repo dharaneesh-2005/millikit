@@ -178,21 +178,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.setHeader("session-id", sessionId);
       }
       
+      console.log("Fetching cart items for session:", sessionId);
+      
       const cartItems = await storage.getCartItems(sessionId);
+      
+      // Ensure cartItems is an array
+      if (!Array.isArray(cartItems)) {
+        console.error("Error: cartItems is not an array:", cartItems);
+        res.status(500).json({ message: "Invalid cart data format" });
+        return;
+      }
+      
+      console.log("Found cart items:", cartItems.length);
       
       // Get product details for each cart item
       const cartWithProducts = await Promise.all(
         cartItems.map(async (item) => {
-          const product = await storage.getProductById(item.productId);
-          return {
-            ...item,
-            product,
-          };
+          try {
+            const product = await storage.getProductById(item.productId);
+            return {
+              ...item,
+              product,
+            };
+          } catch (err) {
+            console.error(`Error fetching product ${item.productId}:`, err);
+            return {
+              ...item,
+              product: null,
+            };
+          }
         })
       );
       
+      console.log("Returning cart with products:", cartWithProducts.length);
       res.json(cartWithProducts);
     } catch (error) {
+      console.error("Error fetching cart items:", error);
       res.status(500).json({ message: "Error fetching cart items" });
     }
   });
@@ -211,20 +232,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId,
       });
       
-      const existingItem = await storage.getCartItemWithProduct(
-        sessionId,
-        validatedData.productId
-      );
+      console.log("Cart add request with data:", validatedData);
       
-      if (existingItem) {
-        // Update quantity if item already exists
+      // Instead of just checking by product ID, now we need to also check the metaData
+      // to differentiate between different weight options of the same product
+      
+      // Check for an existing item with same product and same metaData (weight option)
+      const existingItems = await storage.getCartItems(sessionId);
+      let existingItemWithSameWeight = null;
+      
+      for (const item of existingItems) {
+        if (item.productId === validatedData.productId) {
+          // Check if metaData (weight options) match
+          if (
+            (item.metaData === null && validatedData.metaData === null) ||
+            (item.metaData === validatedData.metaData) ||
+            (item.metaData && validatedData.metaData && 
+             item.metaData.toString() === validatedData.metaData.toString())
+          ) {
+            existingItemWithSameWeight = item;
+            break;
+          }
+        }
+      }
+      
+      if (existingItemWithSameWeight) {
+        // Update quantity if item with same weight already exists
         const updatedItem = await storage.updateCartItem(
-          existingItem.id,
-          existingItem.quantity + (validatedData.quantity || 1)
+          existingItemWithSameWeight.id,
+          existingItemWithSameWeight.quantity + (validatedData.quantity || 1)
         );
         return res.json(updatedItem);
       }
       
+      // If no matching item (same product + same weight) found, add as new item
       const newCartItem = await storage.addToCart(validatedData);
       res.status(201).json(newCartItem);
     } catch (error) {

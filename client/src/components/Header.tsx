@@ -13,8 +13,10 @@ export default function Header() {
   const { t } = useTranslation();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Calculate total items in cart
-  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  // Calculate total items in cart - ensure cartItems is an array
+  const cartItemCount = Array.isArray(cartItems) 
+    ? cartItems.reduce((total, item) => total + (item.quantity || 0), 0)
+    : 0;
 
   // Toggle mobile menu
   const toggleMobileMenu = () => {

@@ -3,12 +3,17 @@ import { CartItem, Product } from "@shared/schema";
 /**
  * Calculate the cart summary including subtotal, shipping, tax, and total
  */
-export function calculateCartSummary(cartItems: (CartItem & { product?: Product })[]) {
+export function calculateCartSummary(cartItems: (CartItem & { product?: Product })[] | null | undefined) {
+  // Ensure cartItems is an array
+  if (!cartItems || !Array.isArray(cartItems)) {
+    return { subtotal: 0, shipping: 0, tax: 0, total: 0 };
+  }
+  
   // Calculate subtotal
   const subtotal = cartItems.reduce((total, item) => {
     // Use displayPrice (set for weight-specific pricing) if available, otherwise use default price
     const price = parseFloat(item.product?.displayPrice || item.product?.price || "0");
-    return total + (price * item.quantity);
+    return total + (price * (item.quantity || 0));
   }, 0);
   
   // Calculate shipping (free shipping over ₹1000, otherwise ₹100)

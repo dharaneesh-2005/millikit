@@ -149,7 +149,7 @@ export default function Cart() {
                             )}
                             
                             <p className="text-green-600 font-bold">
-                              ₹{item.product?.displayPrice || item.product?.price}
+                              ₹{item.product?.displayPrice || item.product?.price || 0}
                             </p>
                           </div>
                           

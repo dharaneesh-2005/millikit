@@ -276,7 +276,36 @@ export class PostgreSQLStorage implements IStorage {
    */
   async getCartItems(sessionId: string): Promise<CartItem[]> {
     return this.executeWithRetry(async () => {
-      return await this.db.select().from(cartItems).where(eq(cartItems.sessionId, sessionId));
+      try {
+        // Try standard Drizzle ORM query first
+        return await this.db.select().from(cartItems).where(eq(cartItems.sessionId, sessionId));
+      } catch (error) {
+        console.error('Error fetching cart items with Drizzle:', error);
+        
+        // Fallback: Try a raw SQL query without meta_data column if there's an error
+        try {
+          // Use a raw SQL query to get only existing columns
+          const result = await this.client.query(`
+            SELECT id, user_id, session_id, product_id, quantity, created_at
+            FROM cart_items
+            WHERE session_id = $1
+          `, [sessionId]);
+          
+          // Transform the results to match the CartItem interface structure
+          return result.map(row => ({
+            id: row.id,
+            userId: row.user_id,
+            sessionId: row.session_id,
+            productId: row.product_id,
+            quantity: row.quantity,
+            createdAt: row.created_at,
+            metaData: null // Set metaData to null since it doesn't exist in the database
+          }));
+        } catch (fallbackError) {
+          console.error('Fallback query also failed:', fallbackError);
+          throw fallbackError;
+        }
+      }
     });
   }
 
@@ -298,9 +327,54 @@ export class PostgreSQLStorage implements IStorage {
 
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
     return this.executeWithRetry(async () => {
-      const newCartItem = await this.db.insert(cartItems).values(cartItem).returning();
-      return newCartItem[0];
+      try {
+        // Before adding, handle the case where metaData might not be supported
+        const cartItemToInsert = { ...cartItem };
+        
+        // Check if metaData exists in the table using a direct query
+        const hasMetaData = await this.checkIfColumnExists('cart_items', 'meta_data');
+        
+        // If the meta_data column doesn't exist, remove it from the insert
+        if (!hasMetaData && 'metaData' in cartItemToInsert) {
+          delete cartItemToInsert.metaData;
+          console.log('metaData column not found in cart_items table, removing from insert');
+        }
+        
+        const newCartItem = await this.db.insert(cartItems).values(cartItemToInsert).returning();
+        return newCartItem[0];
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        
+        // Fallback when meta_data column causes issues - try without metaData
+        if (cartItem.metaData) {
+          console.log('Retrying cart insert without metaData');
+          const { metaData, ...cartItemWithoutMeta } = cartItem;
+          const newCartItem = await this.db.insert(cartItems).values(cartItemWithoutMeta).returning();
+          return newCartItem[0];
+        }
+        throw error;
+      }
     });
+  }
+  
+  // Utility method to check if a column exists in a table
+  private async checkIfColumnExists(tableName: string, columnName: string): Promise<boolean> {
+    try {
+      // Use SQL directly with parameterized query for safety
+      const result = await this.client.query(
+        `SELECT EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_name = $1 AND column_name = $2
+        ) as column_exists;`,
+        [tableName, columnName]
+      );
+      
+      return result[0]?.column_exists || false;
+    } catch (error) {
+      console.error(`Error checking if column ${columnName} exists in ${tableName}:`, error);
+      return false;
+    }
   }
 
   async updateCartItem(id: number, quantity: number): Promise<CartItem | undefined> {
