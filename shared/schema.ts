@@ -74,6 +74,7 @@ export const cartItems = pgTable("cart_items", {
   sessionId: text("session_id"),
   productId: integer("product_id").references(() => products.id).notNull(),
   quantity: integer("quantity").notNull().default(1),
+  metaData: text("meta_data"),  // Store selected weight and other product options
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -108,30 +108,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("cartSessionId", returnedSessionId);
       }
       
-      // Update local cart state
-      const existingItemIndex = cartItems.findIndex(
-        (item) => item.productId === productId
-      );
+      // Update local cart state - Check for existing cart item with same product and weight
+      // We now consider weight as a unique identifier for the same product
+      let existingItem = null;
+      const updatedItems = [...cartItems];
       
-      if (existingItemIndex !== -1) {
-        // If the same product with a different weight is being added, treat it as a new item
-        const existingItem = cartItems[existingItemIndex];
-        const existingMetaData = existingItem.metaData ? JSON.parse(existingItem.metaData) : {};
-        
-        if (selectedWeight && existingMetaData.selectedWeight !== selectedWeight) {
-          // Get product details to display in cart
-          const productResponse = await fetch(`/api/products/${productId}`);
-          const product = await productResponse.json();
+      // First, try to find an existing item with the same product and weight option
+      for (let i = 0; i < cartItems.length; i++) {
+        const item = cartItems[i];
+        if (item.productId === productId) {
+          // For items with metadata, check if the selected weight matches
+          let itemWeight = undefined;
+          try {
+            if (item.metaData) {
+              const meta = JSON.parse(item.metaData);
+              itemWeight = meta.selectedWeight;
+            }
+          } catch (error) {
+            console.error("Error parsing metadata:", error);
+          }
           
-          // Add as a new item with different weight
-          setCartItems([...cartItems, { ...newItem, product }]);
-        } else {
-          // Same weight or no weight specified, update quantity
-          const updatedItems = [...cartItems];
-          updatedItems[existingItemIndex].quantity += quantity;
-          setCartItems(updatedItems);
+          // Both items have the same weight or both have no weight
+          const sameWeight = (itemWeight === selectedWeight) || 
+                            (!itemWeight && !selectedWeight);
+          
+          if (sameWeight) {
+            existingItem = item;
+            // Update quantity of the existing item
+            updatedItems[i] = {
+              ...item,
+              quantity: item.quantity + quantity
+            };
+            break;
+          }
         }
+      }
+      
+      // If we found and updated an existing item, set the cart state
+      if (existingItem) {
+        setCartItems(updatedItems);
       } else {
+        // This is a new item or the same product with a different weight option
         // Get product details to display in cart
         const productResponse = await fetch(`/api/products/${productId}`);
         const product = await productResponse.json();
