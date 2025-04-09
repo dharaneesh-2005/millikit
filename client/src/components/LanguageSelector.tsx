@@ -24,10 +24,10 @@ export default function LanguageSelector() {
       </div>
 
       {/* Mobile language toggle */}
-      <div className="md:hidden absolute top-4 right-20 z-50">
+      <div className="md:hidden absolute top-4 right-24 z-50">
         <button 
           onClick={toggleLanguage}
-          className="text-gray-700 hover:text-green-600 transition-colors"
+          className="text-gray-700 hover:text-green-600 transition-colors p-2"
           aria-label="Toggle language"
         >
           <i className="fas fa-globe text-xl"></i>

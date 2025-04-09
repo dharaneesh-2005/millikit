@@ -61,7 +61,7 @@
   .language-selector {
     position: fixed;
     top: 20px;
-    right: 100px;
+    right: 20px;
     z-index: 1000;
   }
   

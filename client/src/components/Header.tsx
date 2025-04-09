@@ -44,7 +44,7 @@ export default function Header() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <nav className="container mx-auto px-4 md:px-8 py-4">
+      <nav className="container mx-auto px-4 md:px-12 lg:px-16 py-4 md:py-6">
         <div className="flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -61,17 +61,18 @@ export default function Header() {
             </Link>
           </motion.div>
           
-          <div className="hidden md:flex space-x-10">
+          <div className="hidden md:flex">
             {['/', '/products', '/contact'].map((path, index) => (
               <motion.div
                 key={path}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + (index * 0.1), duration: 0.5 }}
+                className="px-6"
               >
                 <Link 
                   href={path === '/' ? path : path.substring(1)}
-                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-medium' : 'text-gray-700 hover:text-green-600'} transition-colors`}
+                  className={`${isActivePath(path === '/' ? path : path.substring(1)) ? 'text-green-600 font-medium' : 'text-gray-700 hover:text-green-600'} transition-colors text-lg`}
                 >
                   {path === '/' ? t('home') : path === '/products' ? t('products') : t('contact')}
                 </Link>
@@ -79,13 +80,14 @@ export default function Header() {
             ))}
           </div>
           
-          <div className="flex items-center space-x-5">
+          <div className="flex items-center">
             {/* Admin login link - visible on both mobile and desktop */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
+              className="px-4"
             >
               <Link href="/admin/login" className="text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-user-shield text-xl"></i>
@@ -96,6 +98,7 @@ export default function Header() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
               whileHover={{ scale: 1.1 }}
+              className="px-4"
             >
               <Link href="/cart" className="relative text-gray-700 hover:text-green-600 transition-colors">
                 <i className="fas fa-shopping-cart text-xl"></i>
@@ -114,7 +117,7 @@ export default function Header() {
               </Link>
             </motion.div>
             <motion.button 
-              className="md:hidden text-gray-700"
+              className="md:hidden text-gray-700 pl-4"
               onClick={toggleMobileMenu}
               aria-label="Toggle mobile menu"
               initial={{ opacity: 0 }}
