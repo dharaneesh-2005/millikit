@@ -16,7 +16,7 @@ export default function ProductDetail() {
   
   // State for quantity, selected weight and active tab
   const [quantity, setQuantity] = useState(1);
-  const [selectedWeight, setSelectedWeight] = useState("1kg");
+  const [selectedWeight, setSelectedWeight] = useState("");
   const [activeTab, setActiveTab] = useState("description");
   const [mainImage, setMainImage] = useState("");
   
@@ -101,10 +101,21 @@ export default function ProductDetail() {
     ?.filter(p => p.category === product?.category && p.id !== product?.id)
     .slice(0, 4);
   
-  // Set main image when product data is loaded
+  // Set main image and default weight option when product data is loaded
   useEffect(() => {
-    if (product && product.imageUrl) {
-      setMainImage(product.imageUrl);
+    if (product) {
+      // Set main image
+      if (product.imageUrl) {
+        setMainImage(product.imageUrl);
+      }
+      
+      // Set default selected weight to first option
+      if (product.weightOptions && product.weightOptions.length > 0) {
+        setSelectedWeight(product.weightOptions[0]);
+      } else {
+        // Fallback to default weight
+        setSelectedWeight("500g");
+      }
     }
   }, [product]);
   
@@ -259,13 +270,18 @@ export default function ProductDetail() {
                   </span>
                 )}
                 <div className="star-rating ml-4">
-                  {[...Array(5)].map((_, i) => (
-                    <i 
-                      key={i} 
-                      className={`fa${i < Math.floor(Number(product.rating || 0)) ? 's' : 
-                                  i < Math.ceil(Number(product.rating || 0)) && i >= Math.floor(Number(product.rating || 0)) ? 's fa-star-half-alt' : 'r'} fa-star`}
-                    ></i>
-                  ))}
+                  {[...Array(5)].map((_, i) => {
+                    const rating = Number(product.rating || 0);
+                    let starClass = 'far fa-star'; // Default empty star
+                    
+                    if (i < Math.floor(rating)) {
+                      starClass = 'fas fa-star'; // Full star
+                    } else if (i < Math.ceil(rating) && i >= Math.floor(rating)) {
+                      starClass = 'fas fa-star-half-alt'; // Half star
+                    }
+                    
+                    return <i key={i} className={starClass}></i>;
+                  })}
                   <span className="text-gray-500 text-sm ml-2">({product.reviewCount || 0} {t('reviews')})</span>
                 </div>
               </div>
@@ -288,7 +304,8 @@ export default function ProductDetail() {
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">{t('weight')}</h3>
                 <div className="flex flex-wrap gap-2">
-                  {["500g", "1kg", "2kg", "5kg"].map((weight) => (
+                  {/* Use the weight options from product data, fallback to default if none */}
+                  {(product.weightOptions && product.weightOptions.length > 0 ? product.weightOptions : ["500g", "1kg"]).map((weight) => (
                     <label key={weight} className="flex items-center">
                       <input 
                         type="radio" 
@@ -605,13 +622,18 @@ export default function ProductDetail() {
                     <div className="text-5xl font-bold text-gray-800 mr-4">{Number(product.rating || 0).toFixed(1)}</div>
                     <div>
                       <div className="star-rating text-xl">
-                        {[...Array(5)].map((_, i) => (
-                          <i 
-                            key={i} 
-                            className={`fa${i < Math.floor(Number(product.rating || 0)) ? 's' : 
-                                      i < Math.ceil(Number(product.rating || 0)) && i >= Math.floor(Number(product.rating || 0)) ? 's fa-star-half-alt' : 'r'} fa-star`}
-                          ></i>
-                        ))}
+                        {[...Array(5)].map((_, i) => {
+                          const rating = Number(product.rating || 0);
+                          let starClass = 'far fa-star'; // Default empty star
+                          
+                          if (i < Math.floor(rating)) {
+                            starClass = 'fas fa-star'; // Full star
+                          } else if (i < Math.ceil(rating) && i >= Math.floor(rating)) {
+                            starClass = 'fas fa-star-half-alt'; // Half star
+                          }
+                          
+                          return <i key={i} className={starClass}></i>;
+                        })}
                       </div>
                       <p className="text-gray-600 mt-1">Based on {product.reviewCount || 0} reviews</p>
                     </div>
@@ -655,7 +677,7 @@ export default function ProductDetail() {
                               <div className="flex items-center mt-1">
                                 <div className="star-rating text-sm">
                                   {[...Array(5)].map((_, i) => (
-                                    <i key={i} className={`fa${i < review.rating ? 's' : 'r'} fa-star`}></i>
+                                    <i key={i} className={i < review.rating ? 'fas fa-star' : 'far fa-star'}></i>
                                   ))}
                                 </div>
                                 <span className="text-xs text-gray-500 ml-2">Verified Purchase</span>
