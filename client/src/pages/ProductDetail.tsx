@@ -28,18 +28,33 @@ export default function ProductDetail() {
   // State for reviews
   const [productReviews, setProductReviews] = useState<ProductReview[]>([]);
   
-  // Parse reviews from product data
+  // State for calculated average rating
+  const [averageRating, setAverageRating] = useState<number>(0);
+  
+  // Parse reviews from product data and calculate average rating
   useEffect(() => {
     if (product?.reviews) {
       try {
         const parsedReviews = JSON.parse(product.reviews);
-        setProductReviews(Array.isArray(parsedReviews) ? parsedReviews : []);
+        const validReviews = Array.isArray(parsedReviews) ? parsedReviews : [];
+        setProductReviews(validReviews);
+        
+        // Calculate average rating from reviews
+        if (validReviews.length > 0) {
+          const totalRating = validReviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+          const calculatedAvg = totalRating / validReviews.length;
+          setAverageRating(calculatedAvg);
+        } else {
+          setAverageRating(0);
+        }
       } catch (e) {
         console.error("Failed to parse reviews:", e);
         setProductReviews([]);
+        setAverageRating(0);
       }
     } else {
       setProductReviews([]);
+      setAverageRating(0);
     }
   }, [product]);
   
@@ -57,6 +72,13 @@ export default function ProductDetail() {
       
       // Update local state immediately for better UX
       setProductReviews(updatedReviews);
+      
+      // Recalculate average rating
+      if (updatedReviews.length > 0) {
+        const totalRating = updatedReviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+        const calculatedAvg = totalRating / updatedReviews.length;
+        setAverageRating(calculatedAvg);
+      }
       
       // Send the updated reviews to the server
       await apiRequest("PATCH", `/api/products/${product.id}`, {
@@ -77,9 +99,21 @@ export default function ProductDetail() {
       if (product?.reviews) {
         try {
           const parsedReviews = JSON.parse(product.reviews);
-          setProductReviews(Array.isArray(parsedReviews) ? parsedReviews : []);
+          const validReviews = Array.isArray(parsedReviews) ? parsedReviews : [];
+          setProductReviews(validReviews);
+          
+          // Recalculate average rating
+          if (validReviews.length > 0) {
+            const totalRating = validReviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+            const calculatedAvg = totalRating / validReviews.length;
+            setAverageRating(calculatedAvg);
+          } else {
+            setAverageRating(0);
+          }
         } catch (e) {
           console.error("Failed to revert reviews:", e);
+          setProductReviews([]);
+          setAverageRating(0);
         }
       }
       
@@ -271,18 +305,17 @@ export default function ProductDetail() {
                 )}
                 <div className="star-rating ml-4">
                   {[...Array(5)].map((_, i) => {
-                    const rating = Number(product.rating || 0);
                     let starClass = 'far fa-star'; // Default empty star
                     
-                    if (i < Math.floor(rating)) {
+                    if (i < Math.floor(averageRating)) {
                       starClass = 'fas fa-star'; // Full star
-                    } else if (i < Math.ceil(rating) && i >= Math.floor(rating)) {
+                    } else if (i < Math.ceil(averageRating) && i >= Math.floor(averageRating)) {
                       starClass = 'fas fa-star-half-alt'; // Half star
                     }
                     
                     return <i key={i} className={starClass}></i>;
                   })}
-                  <span className="text-gray-500 text-sm ml-2">({product.reviewCount || 0} {t('reviews')})</span>
+                  <span className="text-gray-500 text-sm ml-2">({productReviews.length} {t('reviews')})</span>
                 </div>
               </div>
               
@@ -440,7 +473,7 @@ export default function ProductDetail() {
                   : "text-gray-500 hover:text-green-600"
               }`}
             >
-              {t('reviews')} ({product.reviewCount || 0})
+              {t('reviews')} ({productReviews.length})
             </button>
           </div>
           
@@ -619,23 +652,22 @@ export default function ProductDetail() {
                   </div>
                   
                   <div className="flex items-center mt-4">
-                    <div className="text-5xl font-bold text-gray-800 mr-4">{Number(product.rating || 0).toFixed(1)}</div>
+                    <div className="text-5xl font-bold text-gray-800 mr-4">{averageRating.toFixed(1)}</div>
                     <div>
                       <div className="star-rating text-xl">
                         {[...Array(5)].map((_, i) => {
-                          const rating = Number(product.rating || 0);
                           let starClass = 'far fa-star'; // Default empty star
                           
-                          if (i < Math.floor(rating)) {
+                          if (i < Math.floor(averageRating)) {
                             starClass = 'fas fa-star'; // Full star
-                          } else if (i < Math.ceil(rating) && i >= Math.floor(rating)) {
+                          } else if (i < Math.ceil(averageRating) && i >= Math.floor(averageRating)) {
                             starClass = 'fas fa-star-half-alt'; // Half star
                           }
                           
                           return <i key={i} className={starClass}></i>;
                         })}
                       </div>
-                      <p className="text-gray-600 mt-1">Based on {product.reviewCount || 0} reviews</p>
+                      <p className="text-gray-600 mt-1">Based on {productReviews.length} reviews</p>
                     </div>
                   </div>
                   
