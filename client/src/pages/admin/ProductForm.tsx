@@ -300,27 +300,30 @@ export default function ProductForm() {
       // Update the reviewCount to match the actual number of reviews
       data = { ...data, reviewCount: actualReviewCount };
       
-      // Ensure weight prices are properly added to form data
-      if (weightPrices.length > 0) {
-        // Convert weightPrices array to JSON string if not already converted
-        if (!data.weightPrices || data.weightPrices === "") {
-          console.log("Weight prices not found in form data, adding from state");
-          const pricesObj: Record<string, string> = {};
-          weightPrices.forEach(item => {
-            pricesObj[item.weight] = item.price;
-          });
-          data = { ...data, weightPrices: JSON.stringify(pricesObj) };
-        } else {
-          console.log("Using already saved weight prices from form:", data.weightPrices);
-        }
-      } else if (data.weightOptions && data.weightOptions.length > 0) {
-        // If we have weight options but no prices, create default prices
-        console.log("Creating default weight prices for weight options");
+      // Always synchronize weight prices with the current form data
+      // This ensures removed weights are properly removed from pricing
+      if (data.weightOptions && data.weightOptions.length > 0) {
+        // Create weight prices object based on current weight options only
+        console.log("Synchronizing weight prices with current weight options");
         const pricesObj: Record<string, string> = {};
+        
         data.weightOptions.forEach(option => {
-          pricesObj[option] = data.price || "0";
+          // Find price for this weight option if it exists in our state
+          const weightPrice = weightPrices.find(wp => wp.weight === option);
+          if (weightPrice && weightPrice.price) {
+            pricesObj[option] = weightPrice.price;
+          } else {
+            // Use default price if no specific price set
+            pricesObj[option] = data.price || "0";
+          }
         });
+        
+        // Update form data with synchronized weight prices
         data = { ...data, weightPrices: JSON.stringify(pricesObj) };
+        console.log("Updated weight prices for submission:", pricesObj);
+      } else {
+        // If no weight options, set empty weight prices
+        data = { ...data, weightPrices: "{}" };
       }
 
       const url = isEditMode
@@ -490,10 +493,22 @@ export default function ProductForm() {
                                   className="h-6 w-6 ml-1 p-0"
                                   onClick={() => {
                                     const currentOptions = form.watch("weightOptions") || [];
+                                    // Get the weight option being removed
+                                    const removedOption = currentOptions[index];
+                                    
+                                    // Remove from form's weightOptions array
                                     form.setValue(
                                       "weightOptions", 
                                       currentOptions.filter((_, i) => i !== index)
                                     );
+                                    
+                                    // Also remove from the weightPrices state
+                                    setWeightPrices(prevPrices => 
+                                      prevPrices.filter(wp => wp.weight !== removedOption)
+                                    );
+                                    
+                                    // Reset saved status when changes are made
+                                    setWeightPricesSaved(false);
                                   }}
                                 >
                                   <X className="h-4 w-4" />

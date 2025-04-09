@@ -168,7 +168,19 @@ export default function ProductDetail() {
           console.log("Parsing weight prices from:", product.weightPrices);
           const parsedPrices = JSON.parse(product.weightPrices);
           console.log("Successfully parsed weight prices:", parsedPrices);
-          setWeightPrices(parsedPrices);
+          
+          // Filter the weight prices to only include weights that are in weightOptions
+          // This ensures removed weight options don't show up
+          const filteredPrices: Record<string, string> = {};
+          if (product.weightOptions && Array.isArray(product.weightOptions)) {
+            product.weightOptions.forEach(weight => {
+              if (parsedPrices[weight]) {
+                filteredPrices[weight] = parsedPrices[weight];
+              }
+            });
+          }
+          
+          setWeightPrices(filteredPrices);
           
           // Set initial current price based on default selected weight
           const initialWeight = product.weightOptions && product.weightOptions.length > 0 
@@ -176,9 +188,9 @@ export default function ProductDetail() {
             : "500g";
           
           console.log("Initial selected weight:", initialWeight);  
-          if (parsedPrices[initialWeight]) {
-            console.log("Setting price for weight", initialWeight, "to", parsedPrices[initialWeight]);
-            setCurrentPrice(parsedPrices[initialWeight]);
+          if (filteredPrices[initialWeight]) {
+            console.log("Setting price for weight", initialWeight, "to", filteredPrices[initialWeight]);
+            setCurrentPrice(filteredPrices[initialWeight]);
           } else {
             console.log("No specific price for weight", initialWeight, "using default price", product.price);
             setCurrentPrice(product.price);
