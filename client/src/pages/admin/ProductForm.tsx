@@ -980,39 +980,63 @@ export default function ProductForm() {
                                 {form.watch("weightOptions")?.map((option: string, index: number) => {
                                   // Find the price for this weight option if it exists
                                   const weightPrice = weightPrices.find(wp => wp.weight === option);
+                                  const comparePrice = form.watch("comparePrice");
+                                  const hasDiscount = comparePrice && weightPrice?.price;
+                                  
+                                  // Calculate discount percentage if both prices exist
+                                  let discountPercentage = 0;
+                                  if (hasDiscount && parseFloat(comparePrice) > 0 && parseFloat(weightPrice?.price || "0") > 0) {
+                                    discountPercentage = Math.round((1 - (parseFloat(weightPrice?.price || "0") / parseFloat(comparePrice))) * 100);
+                                  }
+                                  
                                   return (
                                     <div key={index} className="flex items-center gap-4">
-                                      <div className="w-1/3">
+                                      <div className="w-1/4">
                                         <div className="flex items-center">
                                           <Weight className="h-4 w-4 mr-2 text-gray-500" />
-                                          <span>{option}</span>
+                                          <span className="font-medium">{option}</span>
                                         </div>
                                       </div>
                                       <div className="flex-1">
-                                        <div className="relative">
-                                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
-                                          <Input
-                                            placeholder="Price for this weight"
-                                            className="pl-8"
-                                            value={weightPrice?.price || ""}
-                                            onChange={(e) => {
-                                              const updatedPrices = [...weightPrices];
-                                              const existingIndex = updatedPrices.findIndex(wp => wp.weight === option);
-                                              
-                                              if (existingIndex >= 0) {
-                                                updatedPrices[existingIndex].price = e.target.value;
-                                              } else {
-                                                updatedPrices.push({
-                                                  weight: option,
-                                                  price: e.target.value
-                                                });
-                                              }
-                                              
-                                              setWeightPrices(updatedPrices);
-                                              // Reset saved status when changes are made
-                                              setWeightPricesSaved(false);
-                                            }}
-                                          />
+                                        <div className="flex items-center gap-3">
+                                          {/* Current price input */}
+                                          <div className="relative flex-1">
+                                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                                            <Input
+                                              placeholder="Price for this weight"
+                                              className="pl-8"
+                                              value={weightPrice?.price || ""}
+                                              onChange={(e) => {
+                                                const updatedPrices = [...weightPrices];
+                                                const existingIndex = updatedPrices.findIndex(wp => wp.weight === option);
+                                                
+                                                if (existingIndex >= 0) {
+                                                  updatedPrices[existingIndex].price = e.target.value;
+                                                } else {
+                                                  updatedPrices.push({
+                                                    weight: option,
+                                                    price: e.target.value
+                                                  });
+                                                }
+                                                
+                                                setWeightPrices(updatedPrices);
+                                                // Reset saved status when changes are made
+                                                setWeightPricesSaved(false);
+                                              }}
+                                            />
+                                          </div>
+                                          
+                                          {/* Comparison price display */}
+                                          {comparePrice && (
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-gray-500 line-through text-sm">₹{comparePrice}</span>
+                                              {discountPercentage > 0 && (
+                                                <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                                                  {discountPercentage}% off
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </div>

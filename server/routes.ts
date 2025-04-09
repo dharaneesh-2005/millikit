@@ -756,9 +756,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Updating product weight prices:", id, req.body.weightPrices);
       
-      // Update only the weight prices field
+      // Extract weight options from weight prices object
+      const weightPricesObj = typeof req.body.weightPrices === 'string' 
+        ? JSON.parse(req.body.weightPrices) 
+        : req.body.weightPrices;
+      
+      // Get the keys from the weight prices object to use as weight options
+      const weightOptions = Object.keys(weightPricesObj);
+      console.log("Extracted weight options:", weightOptions);
+      
+      // Update both weight prices and weight options fields
       const updatedProduct = await storage.updateProduct(id, {
-        weightPrices: req.body.weightPrices
+        weightPrices: typeof req.body.weightPrices === 'string' 
+          ? req.body.weightPrices 
+          : JSON.stringify(req.body.weightPrices),
+        weightOptions: weightOptions
       });
       
       res.status(200).json(updatedProduct);
