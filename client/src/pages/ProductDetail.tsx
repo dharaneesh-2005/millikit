@@ -20,6 +20,13 @@ export default function ProductDetail() {
   const [activeTab, setActiveTab] = useState("description");
   const [mainImage, setMainImage] = useState("");
   
+  // Review form state
+  const [isReviewFormOpen, setIsReviewFormOpen] = useState<boolean>(false);
+  const [reviewName, setReviewName] = useState<string>("");
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState<string>("");
+  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
+  
   // Fetch product details
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: [`/api/products/slug/${slug}`],
@@ -203,6 +210,100 @@ export default function ProductDetail() {
   // Change main image
   const changeMainImage = (src: string) => {
     setMainImage(src);
+  };
+  
+  // Handle submitting a new review
+  const submitReview = useMutation({
+    mutationFn: async () => {
+      if (!product) return;
+      
+      // Create a new review object
+      const newReview: ProductReview = {
+        id: Date.now().toString(), // Create unique ID based on timestamp
+        name: reviewName,
+        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        rating: reviewRating,
+        comment: reviewComment,
+        helpfulCount: 0
+      };
+      
+      // Add the new review to the existing reviews
+      const updatedReviews = [...productReviews, newReview];
+      
+      // Update local state for immediate feedback
+      setProductReviews(updatedReviews);
+      
+      // Recalculate average rating
+      if (updatedReviews.length > 0) {
+        const totalRating = updatedReviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+        const calculatedAvg = totalRating / updatedReviews.length;
+        setAverageRating(calculatedAvg);
+      }
+      
+      // Send the updated reviews to the server
+      await apiRequest("PATCH", `/api/products/${product.id}`, {
+        reviews: JSON.stringify(updatedReviews),
+        // Also update the reviewCount field for admin dashboard display
+        reviewCount: updatedReviews.length
+      });
+      
+      return updatedReviews;
+    },
+    onSuccess: () => {
+      // Close the review form
+      setIsReviewFormOpen(false);
+      
+      // Reset form fields
+      setReviewName("");
+      setReviewRating(5);
+      setReviewComment("");
+      
+      // Invalidate queries to refresh product data
+      queryClient.invalidateQueries({ queryKey: [`/api/products/slug/${slug}`] });
+      
+      // Show success toast
+      toast({
+        title: "Review submitted",
+        description: "Thank you for your feedback!",
+      });
+      
+      // Set active tab to reviews so user can see their review
+      setActiveTab("reviews");
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to submit review",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Handle review form submission
+  const handleReviewSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form fields
+    if (!reviewName.trim()) {
+      toast({
+        title: "Name is required",
+        description: "Please enter your name.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!reviewComment.trim()) {
+      toast({
+        title: "Review text is required",
+        description: "Please enter your review.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Submit the review
+    submitReview.mutate();
   };
   
   // Parse nutrition facts if available
@@ -646,7 +747,10 @@ export default function ProductDetail() {
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-semibold text-gray-800">Customer Reviews</h3>
-                    <button className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                    <button 
+                      className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                      onClick={() => setIsReviewFormOpen(true)}
+                    >
                       Write a Review
                     </button>
                   </div>
@@ -751,6 +855,98 @@ export default function ProductDetail() {
           </div>
         </div>
       </section>
+      
+      {/* Review Form Modal */}
+      {isReviewFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-800">Write a Review</h3>
+                <button 
+                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                  onClick={() => setIsReviewFormOpen(false)}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
+              <form onSubmit={handleReviewSubmit}>
+                <div className="mb-4">
+                  <label htmlFor="reviewName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    id="reviewName"
+                    value={reviewName}
+                    onChange={(e) => setReviewName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter your name"
+                    required
+                  />
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rating
+                  </label>
+                  <div className="flex items-center space-x-1">
+                    {[1, 2, 3, 4, 5].map((rating) => (
+                      <button
+                        key={rating}
+                        type="button"
+                        onClick={() => setReviewRating(rating)}
+                        className="text-2xl focus:outline-none"
+                      >
+                        <i 
+                          className={rating <= reviewRating ? 'fas fa-star text-yellow-400' : 'far fa-star text-gray-300'} 
+                          aria-hidden="true"
+                        ></i>
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm text-gray-600">
+                      {reviewRating} out of 5 stars
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <label htmlFor="reviewComment" className="block text-sm font-medium text-gray-700 mb-1">
+                    Your Review
+                  </label>
+                  <textarea
+                    id="reviewComment"
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Write your review here..."
+                    required
+                  ></textarea>
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsReviewFormOpen(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitReview.isPending}
+                    className="px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitReview.isPending ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Related Products */}
       {relatedProducts && relatedProducts.length > 0 && (
